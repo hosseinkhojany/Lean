@@ -7,7 +7,7 @@
 # Use base system for cleaning up wayward processes
 FROM phusion/baseimage:jammy-1.0.1
 
-MAINTAINER QuantConnect <contact@quantconnect.com>
+MAINTAINER CustomQuantConnect <contact@quantconnect.com>
 
 # Use baseimage-docker's init system.
 CMD ["/sbin/my_init"]
