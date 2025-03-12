@@ -56,17 +56,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuantConnect.Optimizer.Laun
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuantConnect.DownloaderDataProvider.Launcher", "DownloaderDataProvider\QuantConnect.DownloaderDataProvider.Launcher.csproj", "{D139191E-50D5-4284-AC9C-247ED60950F4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.OandaBrokerage.ToolBox", "QuantConnect.OandaBrokerage.ToolBox\QuantConnect.OandaBrokerage.ToolBox.csproj", "{38EF2177-F4F2-42D8-8A91-2817254DFF56}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.OandaBrokerage", "QuantConnect.OandaBrokerage\QuantConnect.OandaBrokerage.csproj", "{3B51B008-D2EA-45CA-A073-2143C6EDC206}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.Brokrage.MetaTrader.ToolBox", "QuantConnect.MetaTrader.ToolBox\QuantConnect.Brokrage.MetaTrader.ToolBox.csproj", "{2D93666F-2B91-430D-B969-A31EF0A96CC5}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.MetaTraderBrokerage", "QuantConnect.MetaTraderBrokerage\QuantConnect.MetaTraderBrokerage.csproj", "{2F26E289-CBF0-4D1B-8408-17BD35E77E00}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.DataSource.MetaTrader", "QuantConnect.DataSource.MetaTrader\QuantConnect.DataSource.MetaTrader.csproj", "{83F1BBAB-9289-438A-B959-C3EF05FEB11B}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.DataSource.FactSet", "QuantConnect.FactSet\QuantConnect.DataSource.FactSet.csproj", "{5A2BA2C9-30FC-48F7-9540-77408F413F5C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MtProxyUI", "MtProxyUI\MtProxyUI.csproj", "{8E1D1885-C55F-43DF-BEF5-557B7474C0B2}"
 EndProject
@@ -91,6 +83,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MTConnector", "mtapi\MTConnector\MTConnector.vcxproj", "{2BE5FAC1-7FB7-45C3-9215-31A5BC4B964F}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MtService", "mtapi\MtService\MtService.vcxproj", "{3EFFFF03-2A1D-48AA-A49A-9F90889F31E0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.OandaBrokerage", "QuantConnect.OandaBrokerage\QuantConnect.OandaBrokerage.csproj", "{FC31966E-AA24-416F-9970-5AAB2007E25E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -470,54 +464,6 @@ Global
 		{D139191E-50D5-4284-AC9C-247ED60950F4}.Release|x64.Build.0 = Release|Any CPU
 		{D139191E-50D5-4284-AC9C-247ED60950F4}.Release|x86.ActiveCfg = Release|Any CPU
 		{D139191E-50D5-4284-AC9C-247ED60950F4}.Release|x86.Build.0 = Release|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Debug|ARM64.ActiveCfg = Debug|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Debug|ARM64.Build.0 = Debug|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Debug|x64.Build.0 = Debug|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Debug|x86.Build.0 = Debug|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Release|Any CPU.Build.0 = Release|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Release|ARM64.ActiveCfg = Release|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Release|ARM64.Build.0 = Release|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Release|x64.ActiveCfg = Release|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Release|x64.Build.0 = Release|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Release|x86.ActiveCfg = Release|Any CPU
-		{38EF2177-F4F2-42D8-8A91-2817254DFF56}.Release|x86.Build.0 = Release|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Debug|ARM64.ActiveCfg = Debug|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Debug|ARM64.Build.0 = Debug|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Debug|x64.Build.0 = Debug|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Debug|x86.Build.0 = Debug|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Release|ARM64.ActiveCfg = Release|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Release|ARM64.Build.0 = Release|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Release|x64.ActiveCfg = Release|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Release|x64.Build.0 = Release|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Release|x86.ActiveCfg = Release|Any CPU
-		{3B51B008-D2EA-45CA-A073-2143C6EDC206}.Release|x86.Build.0 = Release|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Debug|ARM64.ActiveCfg = Debug|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Debug|ARM64.Build.0 = Debug|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Debug|x64.Build.0 = Debug|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Debug|x86.Build.0 = Debug|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Release|ARM64.ActiveCfg = Release|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Release|ARM64.Build.0 = Release|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Release|x64.ActiveCfg = Release|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Release|x64.Build.0 = Release|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Release|x86.ActiveCfg = Release|Any CPU
-		{2D93666F-2B91-430D-B969-A31EF0A96CC5}.Release|x86.Build.0 = Release|Any CPU
 		{2F26E289-CBF0-4D1B-8408-17BD35E77E00}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2F26E289-CBF0-4D1B-8408-17BD35E77E00}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2F26E289-CBF0-4D1B-8408-17BD35E77E00}.Debug|ARM64.ActiveCfg = Debug|Any CPU
@@ -550,22 +496,6 @@ Global
 		{83F1BBAB-9289-438A-B959-C3EF05FEB11B}.Release|x64.Build.0 = Release|Any CPU
 		{83F1BBAB-9289-438A-B959-C3EF05FEB11B}.Release|x86.ActiveCfg = Release|Any CPU
 		{83F1BBAB-9289-438A-B959-C3EF05FEB11B}.Release|x86.Build.0 = Release|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Debug|ARM64.ActiveCfg = Debug|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Debug|ARM64.Build.0 = Debug|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Debug|x64.Build.0 = Debug|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Debug|x86.Build.0 = Debug|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Release|ARM64.ActiveCfg = Release|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Release|ARM64.Build.0 = Release|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Release|x64.ActiveCfg = Release|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Release|x64.Build.0 = Release|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Release|x86.ActiveCfg = Release|Any CPU
-		{5A2BA2C9-30FC-48F7-9540-77408F413F5C}.Release|x86.Build.0 = Release|Any CPU
 		{8E1D1885-C55F-43DF-BEF5-557B7474C0B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8E1D1885-C55F-43DF-BEF5-557B7474C0B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8E1D1885-C55F-43DF-BEF5-557B7474C0B2}.Debug|ARM64.ActiveCfg = Debug|Any CPU
@@ -758,6 +688,22 @@ Global
 		{3EFFFF03-2A1D-48AA-A49A-9F90889F31E0}.Release|x64.Build.0 = Release|x64
 		{3EFFFF03-2A1D-48AA-A49A-9F90889F31E0}.Release|x86.ActiveCfg = Release|Win32
 		{3EFFFF03-2A1D-48AA-A49A-9F90889F31E0}.Release|x86.Build.0 = Release|Win32
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|x64.Build.0 = Debug|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|x86.Build.0 = Debug|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|ARM64.Build.0 = Release|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|x64.ActiveCfg = Release|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|x64.Build.0 = Release|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|x86.ActiveCfg = Release|Any CPU
+		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
