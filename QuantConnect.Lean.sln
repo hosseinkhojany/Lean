@@ -62,7 +62,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.OandaBrokerage
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.Brokrage.MetaTrader.ToolBox", "QuantConnect.MetaTrader.ToolBox\QuantConnect.Brokrage.MetaTrader.ToolBox.csproj", "{2D93666F-2B91-430D-B969-A31EF0A96CC5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.Brokrage.MetaTrader", "QuantConnect.MetaTrader\QuantConnect.Brokrage.MetaTrader.csproj", "{2F26E289-CBF0-4D1B-8408-17BD35E77E00}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.MetaTraderBrokerage", "QuantConnect.MetaTraderBrokerage\QuantConnect.MetaTraderBrokerage.csproj", "{2F26E289-CBF0-4D1B-8408-17BD35E77E00}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.DataSource.MetaTrader", "QuantConnect.DataSource.MetaTrader\QuantConnect.DataSource.MetaTrader.csproj", "{83F1BBAB-9289-438A-B959-C3EF05FEB11B}"
 EndProject

@@ -279,6 +279,7 @@ QuantConnect.Lean.sln.DotSettings*
 Research/Notebooks
 
 #Docker result files
+MODULES/
 Results/
 MtProxyUI/
 mtapi/

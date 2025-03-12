@@ -55,7 +55,7 @@
     <ProjectReference Include="..\Common\QuantConnect.csproj" />
     <ProjectReference Include="..\Optimizer.Launcher\QuantConnect.Optimizer.Launcher.csproj" />
     <ProjectReference Include="..\QuantConnect.DataSource.MetaTrader\QuantConnect.DataSource.MetaTrader.csproj" />
-    <ProjectReference Include="..\QuantConnect.MetaTrader\QuantConnect.Brokrage.MetaTrader.csproj" />
+    <ProjectReference Include="..\QuantConnect.MetaTraderBrokerage\QuantConnect.MetaTraderBrokerage.csproj" />
     <ProjectReference Include="..\QuantConnect.OandaBrokerage\QuantConnect.OandaBrokerage.csproj" />
     <ProjectReference Include="..\Research\QuantConnect.Research.csproj" />
     <ProjectReference Include="..\Logging\QuantConnect.Logging.csproj" />
