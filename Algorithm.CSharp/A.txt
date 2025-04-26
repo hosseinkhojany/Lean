@@ -1,0 +1,5 @@
+OrderTicketDemoAlgorithm
+OpeningBreakoutAlgorithm
+CustomDataRegressionAlgorithm
+CustomDataTypeHistoryAlgorithm
+FuzzyInferenceAlgorithm

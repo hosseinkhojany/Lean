@@ -22,7 +22,7 @@ public class AAAFVG : QCAlgorithm
         SetCash(100000);
 
         xauusdSymbol = AddCfd("XAUUSD", Resolution.Minute).Symbol;
-        AddData<AAACustomData>(xauusdSymbol, Resolution.Minute);
+        AddData<AAAMinute5>(xauusdSymbol);
 
         _tradeBars = new RollingWindow<TradeBar>(_lookbackPeriod);
         SetWarmUp(_lookbackPeriod);

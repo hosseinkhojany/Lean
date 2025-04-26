@@ -3,16 +3,22 @@ using QuantConnect.Data;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using NodaTime;
+using QuantConnect.Configuration;
+using QuantConnect.Data;
+using QuantConnect.Data.Market;
+using QuantConnect.Interfaces;
+using QuantConnect.Logging;
+using QuantConnect.Securities;
+using QuantConnect.Util;
 
 namespace QuantConnect.Algorithm.CSharp
 {
-    
-    
-    
-        public class AAACustomData : BaseData
+        public class AAAMinute5 : DynamicData
         {
             public decimal Open { get; set; }
             public decimal High { get; set; }
@@ -22,7 +28,6 @@ namespace QuantConnect.Algorithm.CSharp
 
             public override SubscriptionDataSource GetSource(SubscriptionDataConfig config, DateTime date, bool isLiveMode)
             {
-                string securityType = config.SecurityType.ToString().ToLower();
                 string filePath = $"D:\\develop\\cSharpProjects\\LEAN\\Lean\\Data\\custom\\{config.Symbol.Value}_Minute5.csv";
                 return new SubscriptionDataSource(filePath, SubscriptionTransportMedium.LocalFile, FileFormat.Csv);
             }
@@ -40,7 +45,7 @@ namespace QuantConnect.Algorithm.CSharp
                     return null;
                 }
 
-                var data = new TradeBar
+                var data = new AAAMinute5()
                 {
                     Time = DateTime.ParseExact(csv[0], "M/d/yyyy h:mm:ss tt", CultureInfo.InvariantCulture),
                     Open = Parse.Decimal(csv[1]),
@@ -48,23 +53,38 @@ namespace QuantConnect.Algorithm.CSharp
                     Low = Parse.Decimal(csv[3]),
                     Close = Parse.Decimal(csv[4]),
                     Volume = Parse.Decimal(csv[5]),
+                    Value = Parse.Decimal(csv[4]),
                     Symbol = config.Symbol
                 };
 
                 return data;
             }
-
-            public override BaseData Clone()
+            
+            public TradeBar ToTradeBar()
             {
-                return new AAACustomData
+                return new TradeBar
                 {
-                    Time = Time,
-                    Symbol = Symbol,
-                    Open = Open,
-                    High = High,
-                    Low = Low,
-                    Close = Close,
-                    Volume = Volume
+                    Time = this.Time,
+                    Open = this.Open,
+                    High = this.High,
+                    Low = this.Low,
+                    Close = this.Close,
+                    Volume = this.Volume,
+                    Value = this.Value,
+                    Symbol = this.Symbol
+                };
+            }
+            public TradeBar ToTradeBarWithoutSymbol()
+            {
+                return new TradeBar
+                {
+                    Time = this.Time,
+                    Open = this.Open,
+                    High = this.High,
+                    Low = this.Low,
+                    Close = this.Close,
+                    Volume = this.Volume,
+                    Value = this.Value,
                 };
             }
         }

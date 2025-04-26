@@ -51,7 +51,7 @@ namespace QuantConnect.Algorithm.CSharp
             SetCash(100000);
 
             _symbol = AddForex("EURUSD", Resolution.Minute).Symbol;
-            AddData<AAACustomData>(_symbol, Resolution.Minute);
+            AddData<AAAMinute5>(_symbol);
 
             // Initialize ATR indicator
             _atr = ATR(_symbol, 14, resolution: Resolution.Hour);

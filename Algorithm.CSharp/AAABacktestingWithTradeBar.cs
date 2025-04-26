@@ -22,7 +22,7 @@ namespace QuantConnect.Algorithm.CSharp
             SetEndDate(2025, 04, 04);
             SetCash(100000);
             xauusdSymbol = AddCfd("XAUUSD", Resolution.Minute).Symbol;
-            AddData<AAACustomData>(xauusdSymbol, Resolution.Minute);
+            AddData<AAAMinute5>(xauusdSymbol);
             engulfing = CandlestickPatterns.Engulfing(xauusdSymbol);
         }
 
