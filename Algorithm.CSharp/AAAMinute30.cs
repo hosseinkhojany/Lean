@@ -28,7 +28,7 @@ namespace QuantConnect.Algorithm.CSharp
 
             public override SubscriptionDataSource GetSource(SubscriptionDataConfig config, DateTime date, bool isLiveMode)
             {
-                string filePath = $"D:\\develop\\cSharpProjects\\LEAN\\Lean\\Data\\custom\\{config.Symbol.Value}_Minute30.csv";
+                string filePath = $"..\\..\\..\\Data\\custom\\{config.Symbol.Value}_Minute30.csv";
                 return new SubscriptionDataSource(filePath, SubscriptionTransportMedium.LocalFile, FileFormat.Csv);
             }
 
