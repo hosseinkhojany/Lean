@@ -18,23 +18,24 @@ namespace QuantConnect.Algorithm.CSharp
 {
     public class AAATestLive : QCAlgorithm, IRegressionAlgorithmDefinition
     {
-        private Symbol xauusd;
+        private Symbol symbol;
         private bool _hasPlacedOrder = false;
         public override void Initialize()
         {
             Settings.DailyPreciseEndTime = false;
-            xauusd = AddCfd("XAUUSD", Resolution.Minute).Symbol;
-            // AddCfd("XAUUSD", Resolution.Second);
+            symbol = AddCrypto("BTCUSD", Resolution.Minute).Symbol;
+            // symbol = AddCfd("XAUUSD", Resolution.Minute).Symbol;
             SetWarmup(10, Resolution.Minute);
         }
 
 
         public override void OnData(Slice slice)
         {
+            TradeBar currentBar = new TradeBar();
             if(slice.QuoteBars.Count > 0)
             {
-                QuoteBar quoteBar = slice.Get<QuoteBar>(xauusd);
-                TradeBar currentBar = new TradeBar
+                QuoteBar quoteBar = slice.Get<QuoteBar>(symbol);
+                currentBar = new TradeBar
                 {
                     Time = quoteBar.Time,
                     Open = quoteBar.Open,
@@ -44,25 +45,24 @@ namespace QuantConnect.Algorithm.CSharp
                     Value = quoteBar.Value,
                     Symbol = quoteBar.Symbol
                 };
-                if (!Portfolio.Invested && !_hasPlacedOrder && !IsWarmingUp && Securities[xauusd].Price > 0)
-                {
-                    OrderTicket order = MarketOrder(xauusd, 1);
-                    // OrderTicket order2 = SubmitOrderRequest(
-                    //     new SubmitOrderRequest(
-                    //         OrderType.Market,
-                    //         stopPrice: Securities[xauusd].Price - 50,
-                    //         limitPrice: Securities[xauusd].Price + 50,
-                    //         quantity: 1,
-                    //         symbol: xauusd,
-                    //         time: Time,
-                    //         tag: "Test Order",
-                    //         securityType: SecurityType.Cfd
-                    //     )
-                    // );
-                    _hasPlacedOrder = true;
-                    Log($"{Time}: Data confirmed for {xauusd}. Price: {currentBar.Price}. Placing Market Order.");
-                }
+                
             }
+
+            if (slice.Bars.Count > 0)
+            {
+                currentBar = slice.Get<TradeBar>().First().Value;
+            }
+
+            if (!Portfolio.Invested && !_hasPlacedOrder && !IsWarmingUp && Securities[symbol].Price > 0)
+                {
+                    // OrderTicket order = StopMarketOrder(symbol, -1, stopPrice: Securities[symbol].Price + 50);
+                    OrderTicket order = StopLimitOrder(symbol, 
+                        Securities[symbol].SymbolProperties.MinimumOrderSize ?? 0.01m, 
+                        stopPrice: Securities[symbol].Price - 50,
+                        limitPrice: Securities[symbol].Price + 50);
+                    _hasPlacedOrder = true;
+                    Log($"{Time}: Data confirmed for {symbol}. Price: {currentBar.Price}. Placing Market Order.");
+                }
         }
 
         public override void OnOrderEvent(OrderEvent orderEvent)
