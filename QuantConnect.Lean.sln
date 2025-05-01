@@ -84,10 +84,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MTConnector", "mtapi\MTConn
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MtService", "mtapi\MtService\MtService.vcxproj", "{3EFFFF03-2A1D-48AA-A49A-9F90889F31E0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.OandaBrokerage", "QuantConnect.OandaBrokerage\QuantConnect.OandaBrokerage.csproj", "{FC31966E-AA24-416F-9970-5AAB2007E25E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "QuantConnect.DataSource.CoinAPI", "MODULES\Lean.DataSource.CoinAPI\QuantConnect.CoinAPI\QuantConnect.DataSource.CoinAPI.csproj", "{0212057D-1F2D-446F-8D39-5D0E407E9FA7}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -691,38 +687,6 @@ Global
 		{3EFFFF03-2A1D-48AA-A49A-9F90889F31E0}.Release|x64.Build.0 = Release|x64
 		{3EFFFF03-2A1D-48AA-A49A-9F90889F31E0}.Release|x86.ActiveCfg = Release|Win32
 		{3EFFFF03-2A1D-48AA-A49A-9F90889F31E0}.Release|x86.Build.0 = Release|Win32
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|ARM64.ActiveCfg = Debug|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|ARM64.Build.0 = Debug|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|x64.Build.0 = Debug|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Debug|x86.Build.0 = Debug|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|ARM64.ActiveCfg = Release|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|ARM64.Build.0 = Release|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|x64.ActiveCfg = Release|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|x64.Build.0 = Release|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|x86.ActiveCfg = Release|Any CPU
-		{FC31966E-AA24-416F-9970-5AAB2007E25E}.Release|x86.Build.0 = Release|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Debug|ARM64.ActiveCfg = Debug|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Debug|ARM64.Build.0 = Debug|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Debug|x64.Build.0 = Debug|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Debug|x86.Build.0 = Debug|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Release|ARM64.ActiveCfg = Release|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Release|ARM64.Build.0 = Release|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Release|x64.ActiveCfg = Release|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Release|x64.Build.0 = Release|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Release|x86.ActiveCfg = Release|Any CPU
-		{0212057D-1F2D-446F-8D39-5D0E407E9FA7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

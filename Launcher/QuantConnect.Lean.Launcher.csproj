@@ -57,11 +57,9 @@
     <ProjectReference Include="..\Engine\QuantConnect.Lean.Engine.csproj" />
     <ProjectReference Include="..\Indicators\QuantConnect.Indicators.csproj" />
     <ProjectReference Include="..\Common\QuantConnect.csproj" />
-    <ProjectReference Include="..\MODULES\Lean.DataSource.CoinAPI\QuantConnect.CoinAPI\QuantConnect.DataSource.CoinAPI.csproj" />
     <ProjectReference Include="..\Optimizer.Launcher\QuantConnect.Optimizer.Launcher.csproj" />
     <ProjectReference Include="..\QuantConnect.DataSource.MetaTrader\QuantConnect.DataSource.MetaTrader.csproj" />
     <ProjectReference Include="..\QuantConnect.MetaTraderBrokerage\QuantConnect.MetaTraderBrokerage.csproj" />
-    <ProjectReference Include="..\QuantConnect.OandaBrokerage\QuantConnect.OandaBrokerage.csproj" />
     <ProjectReference Include="..\Research\QuantConnect.Research.csproj" />
     <ProjectReference Include="..\Logging\QuantConnect.Logging.csproj" />
     <ProjectReference Include="..\Messaging\QuantConnect.Messaging.csproj" />
