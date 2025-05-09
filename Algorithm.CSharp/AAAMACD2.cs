@@ -192,10 +192,7 @@ namespace QuantConnect.Algorithm.CSharp
                 var timePeriodIndicatorHistory = IndicatorHistory(macd, symbolName, 
                     new DateTime(2025, 1, 1),
                     new DateTime(2025, 4, 4), Resolution.Minute);
-            
-                indicatorHistories[symbol][ChartLauncherAnnotationType.MACD] = timePeriodIndicatorHistory;
             }
-            
             AAAChartLauncher.Launch(qcChart, Symbols,indicatorHistories, Statistics,false);
         }
 

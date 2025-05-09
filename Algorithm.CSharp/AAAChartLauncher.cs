@@ -103,30 +103,6 @@ class AAAChartLauncher
                             }
                         }
                     }
-                    foreach (var data in indicatorHistory[symbol])
-                    {
-                        if (data.Key == ChartLauncherAnnotationType.MACD)
-                        {
-                                var macd = data.Value.Select(x => ((dynamic)x).Current).ToList();
-                                var fast = data.Value.Select(x => ((dynamic)x).Fast).ToList();
-                                var slow = data.Value.Select(x => ((dynamic)x).Slow).ToList();
-                                var signal = data.Value.Select(x => ((dynamic)x).Signal).ToList();
-                                var histogram = data.Value.Select(x => ((dynamic)x).Histogram).ToList();
-                                
-                                foreach (ChartLauncherItem launcherItem in chartLauncherItem)
-                                {
-                                    if (launcherItem.Symbol == symbol)
-                                    {
-                                        launcherItem.MACDData = new List<MACDData>();
-                                        for (int i = 0; i < fast.Count; i++)
-                                        {
-                                            launcherItem.MACDData.Add(new MACDData(symbol.ToString(), macd[i], signal[i], histogram[i], slow[i], fast[i]));
-                                        }
-                                    }
-                                }
-                        }
-
-                    }
                 }
             }
 
@@ -182,15 +158,13 @@ class ChartLauncherItem
     public List<TradeBar> ChartData;
     public Dictionary<ChartLauncherAnnotationType, List<TradeBar>> AnnotationData;
     public Dictionary<string, string> ExpectedStatistics;
-    public List<MACDData> MACDData;
     
     public ChartLauncherItem(
         string symbol, 
         string chartDataFilePath, 
         List<TradeBar> chartData, 
         Dictionary<ChartLauncherAnnotationType, List<TradeBar>> annotationData,
-        Dictionary<string, string> expectedStatistics,
-        List<MACDData> mACDData
+        Dictionary<string, string> expectedStatistics
         )
     {
         Symbol = symbol;
@@ -198,7 +172,6 @@ class ChartLauncherItem
         ChartData = chartData;
         AnnotationData = annotationData;
         ExpectedStatistics = expectedStatistics;
-        MACDData = mACDData;
     }
     
     public ChartLauncherItem()
@@ -206,34 +179,11 @@ class ChartLauncherItem
     }   
 }
 
-class MACDData 
-{
-    public string Symbol;
-    public decimal MACD;
-    public decimal Signal;
-    public decimal Histogram;
-    public decimal Slow;
-    public decimal Fast;
-    
-    public MACDData(string symbol, decimal macd, decimal signal, decimal histogram, decimal slow, decimal fast)
-    {
-        Symbol = symbol;
-        MACD = macd;
-        Signal = signal;
-        Histogram = histogram;
-        Slow = slow;
-        Fast = fast;
-    }
-    public MACDData()
-    {
-    }
-}
 
 enum ChartLauncherAnnotationType
 {
     Engulfing,
     Doji,
-    RR,
-    MACD
+    RR
 }
 

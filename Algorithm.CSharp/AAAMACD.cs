@@ -3,6 +3,7 @@ using QuantConnect.Data.Market;
 using QuantConnect.Indicators;
 using QuantConnect.Indicators.CandlestickPatterns;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Accord.IO;
@@ -10,7 +11,20 @@ using Microsoft.FSharp.Core;
 using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
-using GenericChartExtensions = Plotly.NET.CSharp.GenericChartExtensions;
+using QuantConnect.Securities;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Threading;
+using NodaTime;
+using QuantConnect.Configuration;
+using QuantConnect.Data;
+using QuantConnect.Data.Market;
+using QuantConnect.Interfaces;
+using QuantConnect.Logging;
+using QuantConnect.Securities;
+using QuantConnect.Util;
 
 namespace QuantConnect.Algorithm.CSharp
 {
@@ -27,6 +41,7 @@ namespace QuantConnect.Algorithm.CSharp
         
         private int _lookbackPeriod = 3;
         private decimal _minimumGapSize = 0.001m;
+        private readonly RollingWindow<TradeBar> rollingWindowsCandle15m = new RollingWindow<TradeBar>(200);
         
         private decimal? previousHistogram15m = null;
         private decimal? previousK15m = null;
@@ -37,12 +52,16 @@ namespace QuantConnect.Algorithm.CSharp
         Chart qcChart;
         private OrderTicket orderBuy;
         private OrderTicket orderSell;
+        private TradeBar openPositionBuy15m;
         
+        private MarketHoursDatabase _marketHoursDatabase;
+        private ConcurrentDictionary<Symbol, TimeZoneOffsetProvider> _symbolExchangeTimeZones = new();
+        protected virtual ITimeProvider TimeProvider { get; } = RealTimeProvider.Instance;
         public override void Initialize()
         {
-            SetStartDate(2025, 01, 01);
-            SetEndDate(2025, 04, 04);
-            SetCash(10000);
+            SetStartDate(2022, 07, 07);
+            SetEndDate(2025, 05, 05);
+            SetCash(1000);
             
             Symbols.Add(AddData<AAAMinute15>(symbolName).Symbol);
             Symbols.Add(AddData<AAAHour4>(symbolName).Symbol);
@@ -53,25 +72,42 @@ namespace QuantConnect.Algorithm.CSharp
 
             // xauusdSymbolDaily = AddCfd("XAUUSD", Resolution.Daily).Symbol;
             // AddData<AAADaily>(xauusdSymbolDaily);
-            macd15m = new MovingAverageConvergenceDivergence(symbolName, 12, 26, 9);
+            
             srsi15m = new StochasticRelativeStrengthIndex(symbolName,  14, 14, 3, 3);
-            macd4h = new MovingAverageConvergenceDivergence(symbolName, 12, 26, 9);
             srsi4h = new StochasticRelativeStrengthIndex(symbolName,  14, 14, 3, 3);
-
-            SetWarmUp(15);
+            
+            macd15m = new MovingAverageConvergenceDivergence(symbolName, 12, 26, 9);
+            macd15m.Window.Size = 200;
+            macd4h = new MovingAverageConvergenceDivergence(symbolName, 12, 26, 9);
+            
+            // macd15m = new MovingAverageConvergenceDivergence(symbolName, 8, 17, 5);
+            // macd4h = new MovingAverageConvergenceDivergence(symbolName, 10, 21, 6);
+            
+            SetWarmUp(5);
             
             qcChart = new Chart(symbolName);
             AddChart(qcChart);
             Settings.DailyPreciseEndTime = false;
+            _marketHoursDatabase = MarketHoursDatabase.FromDataFolder();
+            Schedule.On(DateRules.EveryDay(), TimeRules.BeforeMarketClose("XAUUSD", 10), LiquidatePortfolio);
+        }
+
+        private void LiquidatePortfolio()
+        {
+            Liquidate();
         }
 
         public override void OnData(Slice data)
         {
             if (data.First().Value is AAAMinute15 || data.First().Value is AAAHour4)
             {
-                TradeBar xauusdData;
+                TradeBar xauusdData = new TradeBar();
                 if (data.First().Value is AAAMinute15 minute)
                 {
+                    // var offsetProvider = GetTimeZoneOffsetProvider(symbol);
+                    // var now = TimeProvider.GetUtcNow();
+                    // var exchangeTime = offsetProvider.ConvertFromUtc(now);
+                    // minute.Time = exchangeTime;
                     xauusdData = minute.ToTradeBarWithoutSymbol();
                     macd15m.Update(xauusdData);
                     srsi15m.Update(xauusdData);
@@ -88,38 +124,13 @@ namespace QuantConnect.Algorithm.CSharp
                     Securities[symbol].Update(new List<BaseData> { hour.ToTradeBar() }, xauusdData.GetType());
                 }
 
-        
+                openPositionBuy15m ??= xauusdData;
+
+
                 if (IsWarmingUp) return;
                 
                 if (macd15m.IsReady && srsi15m.IsReady && macd4h.IsReady && srsi4h.IsReady)
                 {
-                    
-                    Console.WriteLine(
-                        "MACD 15m: " + macd15m.Current.Value +
-                        ", Signal 15m: " + macd15m.Signal.Current.Value +
-                        ", Histogram 15m: " + macd15m.Histogram.Current.Value +
-                        ", Fast 15m: " + macd15m.Fast.Current.Value +
-                        ", Slow 15m: " + macd15m.Slow.Current.Value
-                    );
-                    Console.WriteLine(
-                        "MACD 4h: " + macd4h.Current.Value +
-                        ", Signal 4h: " + macd4h.Signal.Current.Value +
-                        ", Histogram 4h: " + macd4h.Histogram.Current.Value +
-                        ", Fast 4h: " + macd4h.Fast.Current.Value +
-                        ", Slow 4h: " + macd4h.Slow.Current.Value
-                    );
-                    Console.WriteLine(
-                        "SRSI 15m: " + srsi15m.Current.Value +
-                        ", K 15m: " + srsi15m.K.Current.Value +
-                        ", D 15m: " + srsi15m.D.Current.Value 
-                    );
-                    Console.WriteLine(
-                        "SRSI 4h: " + srsi4h.Current.Value +
-                        ", K 4h: " + srsi4h.K.Current.Value +
-                        ", D 4h: " + srsi4h.D.Current.Value 
-                    );
-                    
-
                     decimal currentHistogram15m = macd15m.Histogram.Current.Value;
                     decimal currentK15m = srsi15m.K.Current.Value;
                     decimal currentD15m = srsi15m.D.Current.Value;
@@ -133,77 +144,119 @@ namespace QuantConnect.Algorithm.CSharp
 
                     if (previousHistogram15m.HasValue && previousHistogram4h.HasValue)
                     {
-                        // Bullish crossover: Histogram crosses from negative to positive
-                        // if (currentHistogram > 0 && previousHistogram <= 0)
+                        
+                        DateTime targetDate = DateTime.Parse("2022-07-21 11:30:00", DateTimeFormatInfo.CurrentInfo);
+                        if (
+                            xauusdData.Time.Year == targetDate.Year &&
+                            xauusdData.Time.Month == targetDate.Month &&
+                            xauusdData.Time.Day == targetDate.Day &&
+                            xauusdData.Time.Hour == targetDate.Hour 
+                            // && xauusdData.Time.Minute == targetDate.Minute
+                        )
+                        {
+                            Console.WriteLine("");
+                        }
+                        
+                        // var filteredWindowMacd15m = macd15m.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                        decimal biggestD15mFromOpenPosition = 0;
+                        decimal smallestD15mFromOpenPosition = 0;
+                        var filteredWindowD15m = srsi15m.D.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                        if (filteredWindowD15m.Count > 0)
+                        {
+                            biggestD15mFromOpenPosition = filteredWindowD15m.Max(data => data.Value);
+                            smallestD15mFromOpenPosition = filteredWindowD15m.Min(data => data.Value);
+                        }
+                        
+                        decimal biggestK15mFromOpenPosition = 0;
+                        decimal smallestK15mFromOpenPosition = 0;
+                        var filteredWindowK15m = srsi15m.K.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                        if (filteredWindowK15m.Count > 0)
+                        {
+                            biggestK15mFromOpenPosition = filteredWindowK15m.Max(data => data.Value);
+                            smallestK15mFromOpenPosition = filteredWindowK15m.Min(data => data.Value);
+                        }
+                        
+                        //---------------------------------------------BUY
+                        // if (
+                        //     currentHistogram4h > 0 &&
+                        //     currentHistogram15m > 0 &&
+                        //     currentHistogram15m - previousHistogram15m > 0 &&
+                        //     macd15m.Current.Value > macd15m.Signal.Current.Value &&
+                        //     currentK15m > 51 && 
+                        //     currentD15m > 51 && 
+                        //     currentK15m > currentD15m
+                        //     )
                         // {
-                        //     if (!Portfolio.Invested)
+                        //     if (!Portfolio.Invested && Securities[symbol].Price > 0)
                         //     {
-                        //         MarketOrder(symbolName, 1); // Enter long position
-                        //     }
-                        // } 
-                        // // Bearish crossover: Histogram crosses from positive to negative
-                        // else if (currentHistogram < 0 && previousHistogram >= 0)
-                        // {
-                        //     if (Portfolio.Invested)
-                        //     {
-                        //         Liquidate(symbolName); // Exit position
+                        //         // printWhenEntry();
+                        //         Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
+                        //         orderBuy = MarketOrder(symbol, 1); // Open a new sell order
+                        //         openPositionBuy15m = xauusdData;
+                        //         Console.WriteLine("");
                         //     }
                         // }
-
+                        // else if (
+                        //     currentHistogram15m < 0 
+                        //     || (currentHistogram15m * 1.25m) - previousHistogram15m < 0 
+                        //     || macd15m.Current.Value < macd15m.Signal.Current.Value 
+                        //     || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
+                        //     || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
+                        //     || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
+                        //     || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
+                        //     || currentK15m + 5 < currentD15m
+                        //     )
+                        // {
+                        //     // Liquidate(symbolName); // Exit position   
+                        //     if (orderBuy != null)
+                        //     {
+                        //         // printWhenEntry();
+                        //         orderBuy = Transactions.CancelOrder(orderBuy.OrderId);
+                        //     }
+                        //
+                        // }
                         //---------------------------------------------BUY
+                        
+                        
+                        // //---------------------------------------------SELL
                         if (
-                            currentHistogram4h > 0 &&
-                            currentHistogram15m > 0 &&
-                            currentHistogram15m - previousHistogram15m > 0 &&
-                            macd15m.Current.Value > macd15m.Signal.Current.Value &&
-                            currentK15m > 80 &&
-                            currentD15m > 80 && 
-                            currentK15m > currentD15m
-                            )
+                            currentHistogram4h < 0 &&
+                            currentHistogram15m < 0 &&
+                            currentHistogram15m - previousHistogram15m < 0 &&
+                            macd15m.Current.Value < macd15m.Signal.Current.Value &&
+                            currentK15m < 49 &&
+                            currentD15m < 49 && 
+                            currentK15m < currentD15m
+                        )
                         {
-                            if (!Portfolio.Invested && Securities[symbol].Price > 0)
+                            if (!Portfolio.Invested)
                             {
                                 Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
-                                orderBuy = MarketOrder(symbol, 1); // Open a new sell order
+                                orderSell = MarketOrder(symbol, -1); // Open a new sell order
                                 Console.WriteLine("");
                             }
                         }
                         else if (
-                            currentHistogram15m < 0 &&
-                           (currentHistogram15m * 1.2m) - previousHistogram15m < 0 &&
-                            macd15m.Current.Value < macd15m.Signal.Current.Value &
-                            currentK15m < 80 &&
-                            currentD15m < 80 &&
-                            currentK15m + 5 < currentD15m
-                            )
+                            currentHistogram15m > 0 ||
+                            (currentHistogram15m * 1.25m) - previousHistogram15m > 0 ||
+                            macd15m.Current.Value > macd15m.Signal.Current.Value ||
+                            (currentK15m >= 50 && smallestK15mFromOpenPosition is < 47 and > 20) ||
+                            (currentD15m >= 50 && smallestD15mFromOpenPosition is < 47 and > 20) ||
+                            (currentK15m >= 20 && smallestK15mFromOpenPosition is >= 0 and < 20) ||
+                            (currentD15m >= 20 && smallestD15mFromOpenPosition is >= 0 and < 20) ||
+                            currentK15m - 5 > currentD15m
+                        )
                         {
-                            Liquidate(symbolName); // Exit position   
+                            Liquidate(symbolName);
+                            // if (orderSell != null)
+                            // {
+                            //     orderSell = Transactions.CancelOrder(orderSell.OrderId);
+                            // }
+                            
                         }
-                        //---------------------------------------------BUY
-                        
-                        
-                        // //---------------------------------------------SELL
-                        // if (
-                        //     currentHistogram < 0 &&
-                        //     currentHistogram - previousHistogram < 0 &&
-                        //     macd15m.Current.Value < macd15m.Signal.Current.Value &&
-                        //     currentK < 20 &&
-                        //     currentD < 20
-                        //     )
-                        // {
-                        //     orderBuy = MarketOrder(symbolName, -1); // Open a new buy order
-                        // }
-                        // else if (
-                        //     currentHistogram > 0 ||
-                        //          currentHistogram - previousHistogram > 0 ||
-                        //          macd15m.Current.Value > macd15m.Signal.Current.Value || 
-                        //          currentK > 20 ||
-                        //          currentD > 20)
-                        // {
-                        //     Liquidate(symbolName); 
-                        // }
-                        // //---------------------------------------------SELL
 
+                        
+                        // //---------------------------------------------SELL
                     }
 
                     previousHistogram15m = currentHistogram15m; // Update previous value
@@ -217,7 +270,35 @@ namespace QuantConnect.Algorithm.CSharp
 
             }
         }
-        
+
+        public void printWhenEntry()
+        {
+            Console.WriteLine(
+                "MACD 15m: " + macd15m.Current.Value +
+                ", Signal 15m: " + macd15m.Signal.Current.Value +
+                ", Histogram 15m: " + macd15m.Histogram.Current.Value +
+                ", Fast 15m: " + macd15m.Fast.Current.Value +
+                ", Slow 15m: " + macd15m.Slow.Current.Value
+            );
+            Console.WriteLine(
+                "MACD 4h: " + macd4h.Current.Value +
+                ", Signal 4h: " + macd4h.Signal.Current.Value +
+                ", Histogram 4h: " + macd4h.Histogram.Current.Value +
+                ", Fast 4h: " + macd4h.Fast.Current.Value +
+                ", Slow 4h: " + macd4h.Slow.Current.Value
+            );
+            Console.WriteLine(
+                "SRSI 15m: " + srsi15m.Current.Value +
+                ", K 15m: " + srsi15m.K.Current.Value +
+                ", D 15m: " + srsi15m.D.Current.Value 
+            );
+            Console.WriteLine(
+                "SRSI 4h: " + srsi4h.Current.Value +
+                ", K 4h: " + srsi4h.K.Current.Value +
+                ", D 4h: " + srsi4h.D.Current.Value 
+            );
+        }
+
         public override void OnSecuritiesChanged(SecurityChanges changes)
         {
 
@@ -237,8 +318,6 @@ namespace QuantConnect.Algorithm.CSharp
                 var timePeriodIndicatorHistory = IndicatorHistory(macd15m, symbolName, 
                     new DateTime(2025, 1, 1),
                     new DateTime(2025, 4, 4), Resolution.Minute);
-            
-                indicatorHistories[symbol][ChartLauncherAnnotationType.MACD] = timePeriodIndicatorHistory;
             }
             
             AAAChartLauncher.Launch(qcChart, Symbols,indicatorHistories, Statistics,false);
@@ -295,5 +374,14 @@ namespace QuantConnect.Algorithm.CSharp
             {"Portfolio Turnover", "0.83%"},
             {"OrderListHash", "d38318f2dd0a38f11ef4e4fd704706a7"}
         };
+        
+        private TimeZoneOffsetProvider GetTimeZoneOffsetProvider(Symbol symbol)
+        {
+            return _symbolExchangeTimeZones.GetOrAdd(symbol, s =>
+            {
+                var exchangeTimeZone = _marketHoursDatabase.GetExchangeHours(s.ID.Market, s, s.SecurityType).TimeZone;
+                return new TimeZoneOffsetProvider(exchangeTimeZone, TimeProvider.GetUtcNow(), QuantConnect.Time.EndOfTime);
+            });
+        }
     }
 }
