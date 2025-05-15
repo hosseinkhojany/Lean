@@ -106,31 +106,84 @@ class AAAChartLauncher
                 }
             }
 
-            string filePath =
-                System.IO.Path.Combine(path.Split("chart_app.exe").First() + "data\\flutter_assets\\assets\\config",
-                    "config.json");
-            using (var file = new System.IO.StreamWriter(filePath))
+            if (path.EndsWith(".exe"))
             {
-                if (!asFile)
+                string filePath =
+                    System.IO.Path.Combine(path.Split("chart_app.exe").First() + "data\\flutter_assets\\assets\\config",
+                        "config.json");
+                using (var file = new System.IO.StreamWriter(filePath))
                 {
-                    ChartLaunchResult chartLaunchResult = new ChartLaunchResult(statisticsResults, chartLauncherItem);
-                    var json = Newtonsoft.Json.JsonConvert.SerializeObject(chartLaunchResult);
-                    file.WriteLine(json);
+                    if (!asFile)
+                    {
+                        ChartLaunchResult chartLaunchResult = new ChartLaunchResult(statisticsResults, chartLauncherItem);
+                        var json = Newtonsoft.Json.JsonConvert.SerializeObject(chartLaunchResult);
+                        file.WriteLine(json);
+                    }
                 }
+
+                try
+                {
+                    using (Process process = new Process())
+                    {
+                        process.StartInfo = new ProcessStartInfo { FileName = path };
+                        process.Start();
+                    }
+                }
+                catch (System.ComponentModel.Win32Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+            }else if (path.EndsWith(".html"))
+            {
+                string filePath =
+                    System.IO.Path.Combine(path.Split("index.html").First() + "data",
+                        "config.json");
+                using (var file = new System.IO.StreamWriter(filePath))
+                {
+                    if (!asFile)
+                    {
+                        ChartLaunchResult chartLaunchResult = new ChartLaunchResult(statisticsResults, chartLauncherItem);
+                        var json = Newtonsoft.Json.JsonConvert.SerializeObject(chartLaunchResult);
+                        file.WriteLine(json);
+                    }
+                }
+
+                try
+                {
+                    // Start a local server
+                    using (Process serverProcess = new Process())
+                    {
+                        serverProcess.StartInfo = new ProcessStartInfo
+                        {
+                            FileName = "cmd.exe",
+                            Arguments = "/C python -m http.server",
+                            WorkingDirectory = path.Split("index.html").First(),
+                            CreateNoWindow = true,
+                            UseShellExecute = false
+                        };
+                        serverProcess.Start();
+                    }
+
+                    // Launch the browser
+                    using (Process browserProcess = new Process())
+                    {
+                        browserProcess.StartInfo = new ProcessStartInfo
+                        {
+                            FileName = "cmd.exe",
+                            Arguments = $"/C start http://localhost:8000/index.html",
+                            CreateNoWindow = true,
+                            UseShellExecute = false
+                        };
+                        browserProcess.Start();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+
             }
 
-            try
-            {
-                using (Process process = new Process())
-                {
-                    process.StartInfo = new ProcessStartInfo { FileName = path };
-                    process.Start();
-                }
-            }
-            catch (System.ComponentModel.Win32Exception e)
-            {
-                Console.WriteLine(e);
-            }
         }
     }
 }
