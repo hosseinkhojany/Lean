@@ -53,13 +53,14 @@ namespace QuantConnect.Algorithm.CSharp
         private OrderTicket orderBuy;
         private OrderTicket orderSell;
         private TradeBar openPositionBuy15m;
+        private TradeBar openPositionSell15m;
         
         private MarketHoursDatabase _marketHoursDatabase;
         private ConcurrentDictionary<Symbol, TimeZoneOffsetProvider> _symbolExchangeTimeZones = new();
         protected virtual ITimeProvider TimeProvider { get; } = RealTimeProvider.Instance;
         public override void Initialize()
         {
-            SetStartDate(2022, 07, 07);
+            SetStartDate(2025, 01, 01);
             SetEndDate(2025, 05, 05);
             SetCash(1000);
             
@@ -125,6 +126,7 @@ namespace QuantConnect.Algorithm.CSharp
                 }
 
                 openPositionBuy15m ??= xauusdData;
+                openPositionSell15m ??= xauusdData;
 
 
                 if (IsWarmingUp) return;
@@ -157,26 +159,22 @@ namespace QuantConnect.Algorithm.CSharp
                             Console.WriteLine("");
                         }
                         
-                        // var filteredWindowMacd15m = macd15m.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
-                        decimal biggestD15mFromOpenPosition = 0;
-                        decimal smallestD15mFromOpenPosition = 0;
-                        var filteredWindowD15m = srsi15m.D.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
-                        if (filteredWindowD15m.Count > 0)
-                        {
-                            biggestD15mFromOpenPosition = filteredWindowD15m.Max(data => data.Value);
-                            smallestD15mFromOpenPosition = filteredWindowD15m.Min(data => data.Value);
-                        }
-                        
-                        decimal biggestK15mFromOpenPosition = 0;
-                        decimal smallestK15mFromOpenPosition = 0;
-                        var filteredWindowK15m = srsi15m.K.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
-                        if (filteredWindowK15m.Count > 0)
-                        {
-                            biggestK15mFromOpenPosition = filteredWindowK15m.Max(data => data.Value);
-                            smallestK15mFromOpenPosition = filteredWindowK15m.Min(data => data.Value);
-                        }
-                        
                         //---------------------------------------------BUY
+                        // var filteredWindowMacd15m = macd15m.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                        // decimal biggestD15mFromOpenPosition = 0;
+                        // var filteredWindowD15m = srsi15m.D.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                        // if (filteredWindowD15m.Count > 0)
+                        // {
+                        //     biggestD15mFromOpenPosition = filteredWindowD15m.Max(data => data.Value);
+                        // }
+                        //
+                        // decimal biggestK15mFromOpenPosition = 0;
+                        // var filteredWindowK15m = srsi15m.K.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                        // if (filteredWindowK15m.Count > 0)
+                        // {
+                        //     biggestK15mFromOpenPosition = filteredWindowK15m.Max(data => data.Value);
+                        // }
+                        //
                         // if (
                         //     currentHistogram4h > 0 &&
                         //     currentHistogram15m > 0 &&
@@ -187,7 +185,7 @@ namespace QuantConnect.Algorithm.CSharp
                         //     currentK15m > currentD15m
                         //     )
                         // {
-                        //     if (!Portfolio.Invested && Securities[symbol].Price > 0)
+                        //     if (!Portfolio.Invested)
                         //     {
                         //         // printWhenEntry();
                         //         Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
@@ -210,15 +208,30 @@ namespace QuantConnect.Algorithm.CSharp
                         //     // Liquidate(symbolName); // Exit position   
                         //     if (orderBuy != null)
                         //     {
-                        //         // printWhenEntry();
-                        //         orderBuy = Transactions.CancelOrder(orderBuy.OrderId);
+                        //         Transactions.CancelOrder(orderBuy.OrderId);
                         //     }
-                        //
                         // }
                         //---------------------------------------------BUY
                         
                         
+                        
+                        
                         // //---------------------------------------------SELL
+                        
+                        decimal smallestD15mFromOpenPosition = 0;
+                        var filteredWindowD15mSell = srsi15m.D.Window.Where(data => data.Time > openPositionSell15m.Time).ToList();
+                        if (filteredWindowD15mSell.Count > 0)
+                        {
+                            smallestD15mFromOpenPosition = filteredWindowD15mSell.Min(data => data.Value);
+                        }
+                        
+                        decimal smallestK15mFromOpenPosition = 0;
+                        var filteredWindowK15mSell = srsi15m.K.Window.Where(data => data.Time > openPositionSell15m.Time).ToList();
+                        if (filteredWindowK15mSell.Count > 0)
+                        {
+                            smallestK15mFromOpenPosition = filteredWindowK15mSell.Min(data => data.Value);
+                        }
+                        
                         if (
                             currentHistogram4h < 0 &&
                             currentHistogram15m < 0 &&
@@ -232,7 +245,8 @@ namespace QuantConnect.Algorithm.CSharp
                             if (!Portfolio.Invested)
                             {
                                 Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
-                                orderSell = MarketOrder(symbol, -1); // Open a new sell order
+                                orderSell = MarketOrder(symbol, -1);
+                                openPositionSell15m = xauusdData;
                                 Console.WriteLine("");
                             }
                         }
@@ -247,15 +261,12 @@ namespace QuantConnect.Algorithm.CSharp
                             currentK15m - 5 > currentD15m
                         )
                         {
-                            Liquidate(symbolName);
-                            // if (orderSell != null)
-                            // {
-                            //     orderSell = Transactions.CancelOrder(orderSell.OrderId);
-                            // }
-                            
+                            // Liquidate(symbolName);
+                            if (orderSell != null)
+                            {
+                                Transactions.CancelOrder(orderSell.OrderId);
+                            }
                         }
-
-                        
                         // //---------------------------------------------SELL
                     }
 
