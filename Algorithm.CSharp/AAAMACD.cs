@@ -50,8 +50,6 @@ namespace QuantConnect.Algorithm.CSharp
         private decimal? previousK4h = null;
         private decimal? previousD4h = null;
         Chart qcChart;
-        private OrderTicket orderBuy;
-        private OrderTicket orderSell;
         private TradeBar openPositionBuy15m;
         private TradeBar openPositionSell15m;
         
@@ -69,6 +67,7 @@ namespace QuantConnect.Algorithm.CSharp
             // Symbols.Add(AddData<AAADaily>(symbolName).Symbol);
 
             symbol = AddCfd(symbolName).Symbol;
+            
             // AddData<AAAMinute15>(xauusdSymbolMinute5);
 
             // xauusdSymbolDaily = AddCfd("XAUUSD", Resolution.Daily).Symbol;
@@ -160,78 +159,73 @@ namespace QuantConnect.Algorithm.CSharp
                         }
                         
                         //---------------------------------------------BUY
-                        // var filteredWindowMacd15m = macd15m.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
-                        // decimal biggestD15mFromOpenPosition = 0;
-                        // var filteredWindowD15m = srsi15m.D.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
-                        // if (filteredWindowD15m.Count > 0)
-                        // {
-                        //     biggestD15mFromOpenPosition = filteredWindowD15m.Max(data => data.Value);
-                        // }
-                        //
-                        // decimal biggestK15mFromOpenPosition = 0;
-                        // var filteredWindowK15m = srsi15m.K.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
-                        // if (filteredWindowK15m.Count > 0)
-                        // {
-                        //     biggestK15mFromOpenPosition = filteredWindowK15m.Max(data => data.Value);
-                        // }
-                        //
-                        // if (
-                        //     currentHistogram4h > 0 &&
-                        //     currentHistogram15m > 0 &&
-                        //     currentHistogram15m - previousHistogram15m > 0 &&
-                        //     macd15m.Current.Value > macd15m.Signal.Current.Value &&
-                        //     currentK15m > 51 && 
-                        //     currentD15m > 51 && 
-                        //     currentK15m > currentD15m
-                        //     )
-                        // {
-                        //     if (!Portfolio.Invested)
-                        //     {
-                        //         // printWhenEntry();
-                        //         Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
-                        //         orderBuy = MarketOrder(symbol, 1); // Open a new sell order
-                        //         openPositionBuy15m = xauusdData;
-                        //         Console.WriteLine("");
-                        //     }
-                        // }
-                        // else if (
-                        //     currentHistogram15m < 0 
-                        //     || (currentHistogram15m * 1.25m) - previousHistogram15m < 0 
-                        //     || macd15m.Current.Value < macd15m.Signal.Current.Value 
-                        //     || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
-                        //     || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
-                        //     || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
-                        //     || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
-                        //     || currentK15m + 5 < currentD15m
-                        //     )
-                        // {
-                        //     // Liquidate(symbolName); // Exit position   
-                        //     if (orderBuy != null)
-                        //     {
-                        //         Transactions.CancelOrder(orderBuy.OrderId);
-                        //     }
-                        // }
+                        //  var filteredWindowMacd15m = macd15m.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                        //decimal biggestD15mFromOpenPosition = 0;
+                        //var filteredWindowD15m = srsi15m.D.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                        //if (filteredWindowD15m.Count > 0)
+                        //{
+                        //    biggestD15mFromOpenPosition = filteredWindowD15m.Max(data => data.Value);
+                        //}
+
+                        //decimal biggestK15mFromOpenPosition = 0;
+                        //var filteredWindowK15m = srsi15m.K.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                        //if (filteredWindowK15m.Count > 0)
+                        //{
+                        //    biggestK15mFromOpenPosition = filteredWindowK15m.Max(data => data.Value);
+                        //}
+
+                        //if (
+                        //    currentHistogram4h > 0 &&
+                        //    currentHistogram15m > 0 &&
+                        //    currentHistogram15m - previousHistogram15m > 0 &&
+                        //    macd15m.Current.Value > macd15m.Signal.Current.Value &&
+                        //    currentK15m > 51 &&
+                        //    currentD15m > 51 &&
+                        //    currentK15m > currentD15m
+                        //    )
+                        //{
+                        //    if (!Portfolio.Invested)
+                        //    {
+                        //        // printWhenEntry();
+                        //        Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
+                        //        openPositionBuy15m = xauusdData;
+                        //        MarketOrder(symbol, 1, tag: "%=2");
+                        //        Console.WriteLine("");
+                        //    }
+                        //}
+                        //else if (
+                        //    currentHistogram15m < 0
+                        //    || (currentHistogram15m * 1.25m) - previousHistogram15m < 0
+                        //    || macd15m.Current.Value < macd15m.Signal.Current.Value
+                        //    || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
+                        //    || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
+                        //    || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
+                        //    || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
+                        //    || currentK15m + 5 < currentD15m
+                        //    )
+                        //{
+                        //    Liquidate(symbolName); // Exit position   
+                        //}
                         //---------------------------------------------BUY
-                        
-                        
-                        
-                        
+
+
+
+
                         // //---------------------------------------------SELL
-                        
                         decimal smallestD15mFromOpenPosition = 0;
                         var filteredWindowD15mSell = srsi15m.D.Window.Where(data => data.Time > openPositionSell15m.Time).ToList();
                         if (filteredWindowD15mSell.Count > 0)
                         {
                             smallestD15mFromOpenPosition = filteredWindowD15mSell.Min(data => data.Value);
                         }
-                        
+
                         decimal smallestK15mFromOpenPosition = 0;
                         var filteredWindowK15mSell = srsi15m.K.Window.Where(data => data.Time > openPositionSell15m.Time).ToList();
                         if (filteredWindowK15mSell.Count > 0)
                         {
                             smallestK15mFromOpenPosition = filteredWindowK15mSell.Min(data => data.Value);
                         }
-                        
+
                         if (
                             currentHistogram4h < 0 &&
                             currentHistogram15m < 0 &&
@@ -245,8 +239,8 @@ namespace QuantConnect.Algorithm.CSharp
                             if (!Portfolio.Invested)
                             {
                                 Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
-                                orderSell = MarketOrder(symbol, -1);
                                 openPositionSell15m = xauusdData;
+                                OrderTicket ticket = MarketOrder(symbol, -1, tag: "%=2");
                                 Console.WriteLine("");
                             }
                         }
@@ -261,11 +255,7 @@ namespace QuantConnect.Algorithm.CSharp
                             currentK15m - 5 > currentD15m
                         )
                         {
-                            // Liquidate(symbolName);
-                            if (orderSell != null)
-                            {
-                                Transactions.CancelOrder(orderSell.OrderId);
-                            }
+                            Liquidate(symbolName);
                         }
                         // //---------------------------------------------SELL
                     }
