@@ -159,104 +159,104 @@ namespace QuantConnect.Algorithm.CSharp
                         }
                         
                         //---------------------------------------------BUY
-                        //  var filteredWindowMacd15m = macd15m.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
-                        //decimal biggestD15mFromOpenPosition = 0;
-                        //var filteredWindowD15m = srsi15m.D.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
-                        //if (filteredWindowD15m.Count > 0)
-                        //{
-                        //    biggestD15mFromOpenPosition = filteredWindowD15m.Max(data => data.Value);
-                        //}
+                          var filteredWindowMacd15m = macd15m.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                        decimal biggestD15mFromOpenPosition = 0;
+                        var filteredWindowD15m = srsi15m.D.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                        if (filteredWindowD15m.Count > 0)
+                        {
+                            biggestD15mFromOpenPosition = filteredWindowD15m.Max(data => data.Value);
+                        }
 
-                        //decimal biggestK15mFromOpenPosition = 0;
-                        //var filteredWindowK15m = srsi15m.K.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
-                        //if (filteredWindowK15m.Count > 0)
-                        //{
-                        //    biggestK15mFromOpenPosition = filteredWindowK15m.Max(data => data.Value);
-                        //}
+                        decimal biggestK15mFromOpenPosition = 0;
+                        var filteredWindowK15m = srsi15m.K.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                        if (filteredWindowK15m.Count > 0)
+                        {
+                            biggestK15mFromOpenPosition = filteredWindowK15m.Max(data => data.Value);
+                        }
 
-                        //if (
-                        //    currentHistogram4h > 0 &&
-                        //    currentHistogram15m > 0 &&
-                        //    currentHistogram15m - previousHistogram15m > 0 &&
-                        //    macd15m.Current.Value > macd15m.Signal.Current.Value &&
-                        //    currentK15m > 51 &&
-                        //    currentD15m > 51 &&
-                        //    currentK15m > currentD15m
-                        //    )
-                        //{
-                        //    if (!Portfolio.Invested)
-                        //    {
-                        //        // printWhenEntry();
-                        //        Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
-                        //        openPositionBuy15m = xauusdData;
-                        //        MarketOrder(symbol, 1, tag: "%=2");
-                        //        Console.WriteLine("");
-                        //    }
-                        //}
-                        //else if (
-                        //    currentHistogram15m < 0
-                        //    || (currentHistogram15m * 1.25m) - previousHistogram15m < 0
-                        //    || macd15m.Current.Value < macd15m.Signal.Current.Value
-                        //    || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
-                        //    || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
-                        //    || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
-                        //    || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
-                        //    || currentK15m + 5 < currentD15m
-                        //    )
-                        //{
-                        //    Liquidate(symbolName); // Exit position   
-                        //}
+                        if (
+                            currentHistogram4h > 0 &&
+                            currentHistogram15m > 0.8m &&
+                            currentHistogram15m - previousHistogram15m > 0 &&
+                            macd15m.Current.Value > macd15m.Signal.Current.Value &&
+                            currentK15m > 51 &&
+                            currentD15m > 51 &&
+                            currentK15m > currentD15m
+                            )
+                        {
+                            if (!Portfolio.Invested)
+                            {
+                                // printWhenEntry();
+                                Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
+                                openPositionBuy15m = xauusdData;
+                                MarketOrder(symbol, 1, tag: "%=2");
+                                Console.WriteLine("");
+                            }
+                        }
+                        else if (
+                            currentHistogram15m < 0
+                            || (currentHistogram15m * 1.25m) - previousHistogram15m < 0
+                            || macd15m.Current.Value < macd15m.Signal.Current.Value
+                            || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
+                            || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
+                            || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
+                            || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
+                            || currentK15m + 5 < currentD15m
+                            )
+                        {
+                            Liquidate(symbolName); // Exit position   
+                        }
                         //---------------------------------------------BUY
 
 
 
 
                         // //---------------------------------------------SELL
-                        decimal smallestD15mFromOpenPosition = 0;
-                        var filteredWindowD15mSell = srsi15m.D.Window.Where(data => data.Time > openPositionSell15m.Time).ToList();
-                        if (filteredWindowD15mSell.Count > 0)
-                        {
-                            smallestD15mFromOpenPosition = filteredWindowD15mSell.Min(data => data.Value);
-                        }
-
-                        decimal smallestK15mFromOpenPosition = 0;
-                        var filteredWindowK15mSell = srsi15m.K.Window.Where(data => data.Time > openPositionSell15m.Time).ToList();
-                        if (filteredWindowK15mSell.Count > 0)
-                        {
-                            smallestK15mFromOpenPosition = filteredWindowK15mSell.Min(data => data.Value);
-                        }
-
-                        if (
-                            currentHistogram4h < 0 &&
-                            currentHistogram15m < 0 &&
-                            currentHistogram15m - previousHistogram15m < 0 &&
-                            macd15m.Current.Value < macd15m.Signal.Current.Value &&
-                            currentK15m < 49 &&
-                            currentD15m < 49 && 
-                            currentK15m < currentD15m
-                        )
-                        {
-                            if (!Portfolio.Invested)
-                            {
-                                Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
-                                openPositionSell15m = xauusdData;
-                                OrderTicket ticket = MarketOrder(symbol, -1, tag: "%=2");
-                                Console.WriteLine("");
-                            }
-                        }
-                        else if (
-                            currentHistogram15m > 0 ||
-                            (currentHistogram15m * 1.25m) - previousHistogram15m > 0 ||
-                            macd15m.Current.Value > macd15m.Signal.Current.Value ||
-                            (currentK15m >= 50 && smallestK15mFromOpenPosition is < 47 and > 20) ||
-                            (currentD15m >= 50 && smallestD15mFromOpenPosition is < 47 and > 20) ||
-                            (currentK15m >= 20 && smallestK15mFromOpenPosition is >= 0 and < 20) ||
-                            (currentD15m >= 20 && smallestD15mFromOpenPosition is >= 0 and < 20) ||
-                            currentK15m - 5 > currentD15m
-                        )
-                        {
-                            Liquidate(symbolName);
-                        }
+                        // decimal smallestD15mFromOpenPosition = 0;
+                        // var filteredWindowD15mSell = srsi15m.D.Window.Where(data => data.Time > openPositionSell15m.Time).ToList();
+                        // if (filteredWindowD15mSell.Count > 0)
+                        // {
+                        //     smallestD15mFromOpenPosition = filteredWindowD15mSell.Min(data => data.Value);
+                        // }
+                        //
+                        // decimal smallestK15mFromOpenPosition = 0;
+                        // var filteredWindowK15mSell = srsi15m.K.Window.Where(data => data.Time > openPositionSell15m.Time).ToList();
+                        // if (filteredWindowK15mSell.Count > 0)
+                        // {
+                        //     smallestK15mFromOpenPosition = filteredWindowK15mSell.Min(data => data.Value);
+                        // }
+                        //
+                        // if (
+                        //     currentHistogram4h < 0 &&
+                        //     currentHistogram15m < -0.8m &&
+                        //     currentHistogram15m - previousHistogram15m < 0 &&
+                        //     macd15m.Current.Value < macd15m.Signal.Current.Value &&
+                        //     currentK15m < 49 &&
+                        //     currentD15m < 49 && 
+                        //     currentK15m < currentD15m
+                        // )
+                        // {
+                        //     if (!Portfolio.Invested)
+                        //     {
+                        //         Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
+                        //         openPositionSell15m = xauusdData;
+                        //         OrderTicket ticket = MarketOrder(symbol, -1, tag: "%=2");
+                        //         Console.WriteLine("");
+                        //     }
+                        // }
+                        // else if (
+                        //     currentHistogram15m > 0 ||
+                        //     (currentHistogram15m * 1.25m) - previousHistogram15m > 0 ||
+                        //     macd15m.Current.Value > macd15m.Signal.Current.Value ||
+                        //     (currentK15m >= 50 && smallestK15mFromOpenPosition is < 47 and > 20) ||
+                        //     (currentD15m >= 50 && smallestD15mFromOpenPosition is < 47 and > 20) ||
+                        //     (currentK15m >= 20 && smallestK15mFromOpenPosition is >= 0 and < 20) ||
+                        //     (currentD15m >= 20 && smallestD15mFromOpenPosition is >= 0 and < 20) ||
+                        //     currentK15m - 5 > currentD15m
+                        // )
+                        // {
+                        //     Liquidate(symbolName);
+                        // }
                         // //---------------------------------------------SELL
                     }
 
