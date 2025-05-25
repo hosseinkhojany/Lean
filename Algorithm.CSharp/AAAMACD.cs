@@ -25,6 +25,7 @@ using QuantConnect.Interfaces;
 using QuantConnect.Logging;
 using QuantConnect.Securities;
 using QuantConnect.Util;
+using Fasterflect;
 
 namespace QuantConnect.Algorithm.CSharp
 {
@@ -52,6 +53,7 @@ namespace QuantConnect.Algorithm.CSharp
         Chart qcChart;
         private TradeBar openPositionBuy15m;
         private TradeBar openPositionSell15m;
+        private OrderTicket orderTicket;
         
         private MarketHoursDatabase _marketHoursDatabase;
         private ConcurrentDictionary<Symbol, TimeZoneOffsetProvider> _symbolExchangeTimeZones = new();
@@ -89,7 +91,7 @@ namespace QuantConnect.Algorithm.CSharp
             AddChart(qcChart);
             Settings.DailyPreciseEndTime = false;
             _marketHoursDatabase = MarketHoursDatabase.FromDataFolder();
-            Schedule.On(DateRules.EveryDay(), TimeRules.BeforeMarketClose("XAUUSD", 10), LiquidatePortfolio);
+            Schedule.On(DateRules.WeekEnd(), TimeRules.At(23, 50), LiquidatePortfolio);
         }
 
         private void LiquidatePortfolio()
@@ -175,7 +177,10 @@ namespace QuantConnect.Algorithm.CSharp
                         }
 
                         if (
-                            currentHistogram4h > 0 &&
+                            (currentHistogram4h > -1 || 
+                            macd4h.Current.Value > 6 &&
+                            macd4h.Signal.Current.Value > 6 &&
+                            currentHistogram4h > previousHistogram4h) &&
                             currentHistogram15m > 0.8m &&
                             currentHistogram15m - previousHistogram15m > 0 &&
                             macd15m.Current.Value > macd15m.Signal.Current.Value &&
@@ -189,7 +194,7 @@ namespace QuantConnect.Algorithm.CSharp
                                 // printWhenEntry();
                                 Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
                                 openPositionBuy15m = xauusdData;
-                                MarketOrder(symbol, 1, tag: "%=2");
+                                orderTicket = MarketOrder(symbol, 1, tag: "%=2");
                                 Console.WriteLine("");
                             }
                         }
