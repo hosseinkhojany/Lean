@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using QuantConnect.Algorithm.CSharp;
 using System.Linq;
+using System.Threading;
 using MathNet.Numerics;
 using QuantConnect.Brokerages;
 using QuantConnect.Data.UniverseSelection;
@@ -23,9 +24,9 @@ namespace QuantConnect.Algorithm.CSharp
         public override void Initialize()
         {
             Settings.DailyPreciseEndTime = false;
-            symbol = AddCrypto("BTCUSD", Resolution.Minute).Symbol;
-            // symbol = AddCfd("XAUUSD", Resolution.Minute).Symbol;
-            SetWarmup(10, Resolution.Minute);
+            symbol = AddCrypto("BTCUSD", Resolution.Tick).Symbol;
+            // symbol = AddCfd("XAUUSD", Resolution.Tick).Symbol;
+            SetWarmup(10, Resolution.Tick);
         }
 
 
@@ -54,15 +55,17 @@ namespace QuantConnect.Algorithm.CSharp
             }
 
             if (!Portfolio.Invested && !_hasPlacedOrder && !IsWarmingUp && Securities[symbol].Price > 0)
-                {
-                    // OrderTicket order = StopMarketOrder(symbol, -1, stopPrice: Securities[symbol].Price + 50);
-                    OrderTicket order = StopLimitOrder(symbol, 
-                        Securities[symbol].SymbolProperties.MinimumOrderSize ?? 0.01m, 
-                        stopPrice: Securities[symbol].Price - 50,
-                        limitPrice: Securities[symbol].Price + 50);
-                    _hasPlacedOrder = true;
-                    Log($"{Time}: Data confirmed for {symbol}. Price: {currentBar.Price}. Placing Market Order.");
-                }
+            {
+                // OrderTicket order = StopMarketOrder(symbol, -1, stopPrice: Securities[symbol].Price + 50);
+                // OrderTicket order = StopLimitOrder(symbol, 
+                //     Securities[symbol].SymbolProperties.MinimumOrderSize ?? 0.01m, 
+                //     stopPrice: Securities[symbol].Price - 50,
+                //     limitPrice: Securities[symbol].Price + 50);
+                Security security = Securities[symbol];
+                OrderTicket order = MarketOrder(symbol, security.SymbolProperties.MinimumOrderSize ?? 1, tag: "$=11");
+                _hasPlacedOrder = true;
+                Log($"{Time}: Data confirmed for {symbol}. Price: {currentBar.Price}. Placing Market Order.");
+            }
         }
 
         public override void OnOrderEvent(OrderEvent orderEvent)
@@ -73,8 +76,6 @@ namespace QuantConnect.Algorithm.CSharp
 
         public override void OnEndOfAlgorithm()
         {
-            var w = Statistics;
-            AAAChartLauncher.Launch(null, [], [], Statistics, false);
         }
         
 

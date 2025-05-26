@@ -1,31 +1,15 @@
 using QuantConnect.Data;
 using QuantConnect.Data.Market;
 using QuantConnect.Indicators;
-using QuantConnect.Indicators.CandlestickPatterns;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using Accord.IO;
-using Microsoft.FSharp.Core;
 using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
 using QuantConnect.Securities;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Threading;
-using NodaTime;
-using QuantConnect.Configuration;
-using QuantConnect.Data;
-using QuantConnect.Data.Market;
-using QuantConnect.Interfaces;
-using QuantConnect.Logging;
-using QuantConnect.Securities;
-using QuantConnect.Util;
-using Fasterflect;
 
 namespace QuantConnect.Algorithm.CSharp
 {
@@ -53,7 +37,9 @@ namespace QuantConnect.Algorithm.CSharp
         Chart qcChart;
         private TradeBar openPositionBuy15m;
         private TradeBar openPositionSell15m;
+        private TradeBar first15MinuteCandleOfStartOfDay;
         private OrderTicket orderTicket;
+        private bool marketOpen15MinuteTimeCheck;
         
         private MarketHoursDatabase _marketHoursDatabase;
         private ConcurrentDictionary<Symbol, TimeZoneOffsetProvider> _symbolExchangeTimeZones = new();
@@ -66,6 +52,7 @@ namespace QuantConnect.Algorithm.CSharp
             
             Symbols.Add(AddData<AAAMinute15>(symbolName).Symbol);
             Symbols.Add(AddData<AAAHour4>(symbolName).Symbol);
+            // Symbols.Add(AddData<AAAMinute5>(symbolName).Symbol);
             // Symbols.Add(AddData<AAADaily>(symbolName).Symbol);
 
             symbol = AddCfd(symbolName).Symbol;
@@ -91,17 +78,20 @@ namespace QuantConnect.Algorithm.CSharp
             AddChart(qcChart);
             Settings.DailyPreciseEndTime = false;
             _marketHoursDatabase = MarketHoursDatabase.FromDataFolder();
-            Schedule.On(DateRules.WeekEnd(), TimeRules.At(23, 50), LiquidatePortfolio);
+            Schedule.On(DateRules.WeekEnd(), TimeRules.At(23, 50), OnMarketClose);
         }
 
-        private void LiquidatePortfolio()
+        private void OnMarketClose()
         {
+            marketOpen15MinuteTimeCheck = false;
             Liquidate();
         }
+        
+        
 
         public override void OnData(Slice data)
         {
-            if (data.First().Value is AAAMinute15 || data.First().Value is AAAHour4)
+            if (data.First().Value is AAAMinute5 || data.First().Value is AAAMinute15 || data.First().Value is AAAHour4)
             {
                 TradeBar xauusdData = new TradeBar();
                 if (data.First().Value is AAAMinute15 minute)
@@ -116,6 +106,12 @@ namespace QuantConnect.Algorithm.CSharp
                     Plot(symbolName, Symbols[0], xauusdData);
                     // Securities[symbol].SetMarketPrice(xauusdData);
                     Securities[symbol].Update(new List<BaseData> { minute.ToTradeBar() }, xauusdData.GetType());
+                    
+                    if (first15MinuteCandleOfStartOfDay == null || xauusdData.Time.Date.Day != first15MinuteCandleOfStartOfDay.Time.Date.Day)
+                    {
+                        Console.WriteLine(xauusdData.Time);
+                        first15MinuteCandleOfStartOfDay = xauusdData;
+                    }
                 }
                 else if(data.First().Value is AAAHour4 hour)
                 {
@@ -124,6 +120,16 @@ namespace QuantConnect.Algorithm.CSharp
                     srsi4h.Update(xauusdData);
                     Plot(symbolName, Symbols[1], xauusdData);
                     Securities[symbol].Update(new List<BaseData> { hour.ToTradeBar() }, xauusdData.GetType());
+                }
+                else if(data.First().Value is AAAMinute5 minute5)
+                {
+                    xauusdData = minute5.ToTradeBarWithoutSymbol();
+                    Plot(symbolName, Symbols[2], xauusdData);
+                }
+                else if(data.First().Value is AAADaily daily)
+                {
+                    xauusdData = daily.ToTradeBarWithoutSymbol();
+                    Plot(symbolName, Symbols[3], xauusdData);
                 }
 
                 openPositionBuy15m ??= xauusdData;
