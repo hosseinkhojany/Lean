@@ -16,14 +16,14 @@ using QuantConnect.Configuration;
 
 class AAAChartLauncher
 {
-
     public static void Launch(Chart chart, List<Symbol> symbols,
         Dictionary<Symbol, Dictionary<ChartLauncherAnnotationType, IndicatorHistory>> indicatorHistory,
         StatisticsResults statisticsResults, bool asFile)
-    {       
+    {
         string path = Config.Get("chart-launcher-path");
-        List<ChartLauncherItem> chartLauncherItem = new ();
-        if (!String.IsNullOrEmpty(path))
+        List<ChartLauncherItem> chartLauncherItem = new();
+
+        if (!string.IsNullOrEmpty(path))
         {
             if (chart != null)
             {
@@ -32,23 +32,23 @@ class AAAChartLauncher
                     chartLauncherItem.Add(new ChartLauncherItem
                     {
                         Symbol = symbol.ToString(),
-                        ChartData = new (),
-                        AnnotationData = new (),
+                        ChartData = new(),
+                        AnnotationData = new(),
                         ExpectedStatistics = new Dictionary<string, string>()
                     });
                 }
+
                 foreach (var symbol in symbols)
                 {
                     foreach (var series in chart.Series)
                     {
                         if (series.Key.Contains(symbol.ToString()))
                         {
-                            foreach (ChartLauncherAnnotationType annotationType in Enum.GetValues(
-                                         typeof(ChartLauncherAnnotationType)))
+                            foreach (ChartLauncherAnnotationType annotationType in Enum.GetValues(typeof(ChartLauncherAnnotationType)))
                             {
                                 if (series.Key.Contains(annotationType.ToString()))
                                 {
-                                    foreach (ChartLauncherItem launcherItem in chartLauncherItem)
+                                    foreach (var launcherItem in chartLauncherItem)
                                     {
                                         if (!launcherItem.AnnotationData.ContainsKey(annotationType))
                                         {
@@ -83,7 +83,7 @@ class AAAChartLauncher
                                 {
                                     if (data is Candlestick tradeBar)
                                     {
-                                        foreach (ChartLauncherItem launcherItem in chartLauncherItem)
+                                        foreach (var launcherItem in chartLauncherItem)
                                         {
                                             if (launcherItem.Symbol == symbol)
                                             {
@@ -106,52 +106,36 @@ class AAAChartLauncher
                 }
             }
 
-            if (path.EndsWith(".exe"))
+            string filePath = path.EndsWith(".exe")
+                ? System.IO.Path.Combine(path.Split("chart_app.exe").First() + "data\\flutter_assets\\assets\\config", "config.json")
+                : System.IO.Path.Combine(path.Split("index.html").First() + "data", "config.json");
+            if (System.IO.File.Exists(filePath))
             {
-                string filePath =
-                    System.IO.Path.Combine(path.Split("chart_app.exe").First() + "data\\flutter_assets\\assets\\config",
-                        "config.json");
-                using (var file = new System.IO.StreamWriter(filePath))
+                System.IO.File.Delete(filePath);
+            }
+            using (var file = new System.IO.StreamWriter(filePath))
+            {
+                if (!asFile)
                 {
-                    if (!asFile)
-                    {
-                        ChartLaunchResult chartLaunchResult = new ChartLaunchResult(statisticsResults, chartLauncherItem);
-                        var json = Newtonsoft.Json.JsonConvert.SerializeObject(chartLaunchResult);
-                        file.WriteLine(json);
-                    }
+                    var chartLaunchResult = new ChartLaunchResult(statisticsResults, chartLauncherItem);
+                    var json = Newtonsoft.Json.JsonConvert.SerializeObject(chartLaunchResult);
+                    file.WriteLine(json);
                 }
+            }
 
-                try
+            try
+            {
+                if (path.EndsWith(".exe"))
                 {
-                    using (Process process = new Process())
+                    using (var process = new Process())
                     {
                         process.StartInfo = new ProcessStartInfo { FileName = path };
                         process.Start();
                     }
                 }
-                catch (System.ComponentModel.Win32Exception e)
+                else if (path.EndsWith(".html"))
                 {
-                    Console.WriteLine(e);
-                }
-            }else if (path.EndsWith(".html"))
-            {
-                string filePath =
-                    System.IO.Path.Combine(path.Split("index.html").First() + "data",
-                        "config.json");
-                using (var file = new System.IO.StreamWriter(filePath))
-                {
-                    if (!asFile)
-                    {
-                        ChartLaunchResult chartLaunchResult = new ChartLaunchResult(statisticsResults, chartLauncherItem);
-                        var json = Newtonsoft.Json.JsonConvert.SerializeObject(chartLaunchResult);
-                        file.WriteLine(json);
-                    }
-                }
-
-                try
-                {
-                    // Start a local server
-                    using (Process serverProcess = new Process())
+                    using (var serverProcess = new Process())
                     {
                         serverProcess.StartInfo = new ProcessStartInfo
                         {
@@ -164,26 +148,23 @@ class AAAChartLauncher
                         serverProcess.Start();
                     }
 
-                    // Launch the browser
-                    using (Process browserProcess = new Process())
+                    using (var browserProcess = new Process())
                     {
                         browserProcess.StartInfo = new ProcessStartInfo
                         {
                             FileName = "cmd.exe",
-                            Arguments = $"/C start http://localhost:8000/index.html",
+                            Arguments = "/C start http://localhost:8000/index.html",
                             CreateNoWindow = true,
                             UseShellExecute = false
                         };
                         browserProcess.Start();
                     }
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                }
-
             }
-
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
         }
     }
 }
@@ -192,16 +173,14 @@ class ChartLaunchResult
 {
     public StatisticsResults StatisticsResults;
     public List<ChartLauncherItem> ChartLauncherItems;
-    
+
     public ChartLaunchResult(StatisticsResults statisticsResults, List<ChartLauncherItem> chartLauncherItems)
     {
         StatisticsResults = statisticsResults;
         ChartLauncherItems = chartLauncherItems;
     }
-    
-    public ChartLaunchResult()
-    {
-    }
+
+    public ChartLaunchResult() { }
 }
 
 class ChartLauncherItem
@@ -211,14 +190,9 @@ class ChartLauncherItem
     public List<TradeBar> ChartData;
     public Dictionary<ChartLauncherAnnotationType, List<TradeBar>> AnnotationData;
     public Dictionary<string, string> ExpectedStatistics;
-    
-    public ChartLauncherItem(
-        string symbol, 
-        string chartDataFilePath, 
-        List<TradeBar> chartData, 
-        Dictionary<ChartLauncherAnnotationType, List<TradeBar>> annotationData,
-        Dictionary<string, string> expectedStatistics
-        )
+
+    public ChartLauncherItem(string symbol, string chartDataFilePath, List<TradeBar> chartData,
+        Dictionary<ChartLauncherAnnotationType, List<TradeBar>> annotationData, Dictionary<string, string> expectedStatistics)
     {
         Symbol = symbol;
         ChartDataFilePath = chartDataFilePath;
@@ -226,10 +200,8 @@ class ChartLauncherItem
         AnnotationData = annotationData;
         ExpectedStatistics = expectedStatistics;
     }
-    
-    public ChartLauncherItem()
-    {
-    }   
+
+    public ChartLauncherItem() { }
 }
 
 

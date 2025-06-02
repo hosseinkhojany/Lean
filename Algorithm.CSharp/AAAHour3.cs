@@ -1,15 +1,11 @@
 using QuantConnect.Data.Market;
 using QuantConnect.Data;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace QuantConnect.Algorithm.CSharp
 {
-        public class AAAHour : BaseData
+        public class AAAHour3 : DynamicData
         {
             public decimal Open { get; set; }
             public decimal High { get; set; }
@@ -19,7 +15,7 @@ namespace QuantConnect.Algorithm.CSharp
 
             public override SubscriptionDataSource GetSource(SubscriptionDataConfig config, DateTime date, bool isLiveMode)
             {
-                string filePath = $"..\\..\\..\\Data\\custom\\{config.Symbol.Value}_Minute5.csv";
+                string filePath = $"..\\..\\..\\Data\\custom\\{config.Symbol.Value}_Hour3.csv";
                 return new SubscriptionDataSource(filePath, SubscriptionTransportMedium.LocalFile, FileFormat.Csv);
             }
 
@@ -36,7 +32,7 @@ namespace QuantConnect.Algorithm.CSharp
                     return null;
                 }
 
-                var data = new AAAHour()
+                var data = new AAAHour3()
                 {
                     Time = DateTime.ParseExact(csv[0], "M/d/yyyy h:mm:ss tt", CultureInfo.InvariantCulture),
                     Open = Parse.Decimal(csv[1]),
@@ -50,33 +46,33 @@ namespace QuantConnect.Algorithm.CSharp
 
                 return data;
             }
-
-        public TradeBar ToTradeBar()
-        {
-            return new TradeBar
+            
+            public TradeBar ToTradeBar()
             {
-                Time = this.Time,
-                Open = this.Open,
-                High = this.High,
-                Low = this.Low,
-                Close = this.Close,
-                Volume = this.Volume,
-                Value = this.Value,
-                Symbol = this.Symbol
-            };
-        }
-        public TradeBar ToTradeBarWithoutSymbol()
-        {
-            return new TradeBar
+                return new TradeBar
+                {
+                    Time = this.Time,
+                    Open = this.Open,
+                    High = this.High,
+                    Low = this.Low,
+                    Close = this.Close,
+                    Volume = this.Volume,
+                    Value = this.Value,
+                    Symbol = this.Symbol
+                };
+            }
+            public TradeBar ToTradeBarWithoutSymbol()
             {
-                Time = this.Time,
-                Open = this.Open,
-                High = this.High,
-                Low = this.Low,
-                Close = this.Close,
-                Volume = this.Volume,
-                Value = this.Value,
-            };
+                return new TradeBar
+                {
+                    Time = this.Time,
+                    Open = this.Open,
+                    High = this.High,
+                    Low = this.Low,
+                    Close = this.Close,
+                    Volume = this.Volume,
+                    Value = this.Value,
+                };
+            }
         }
-    }
 }

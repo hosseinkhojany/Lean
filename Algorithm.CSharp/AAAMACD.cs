@@ -24,6 +24,8 @@ namespace QuantConnect.Algorithm.CSharp
         private MovingAverageConvergenceDivergence macd4h;
         private StochasticRelativeStrengthIndex  srsi4h;
         
+        private AAAPivotPointStandardIndicator pivotIndicator;
+        
         private int _lookbackPeriod = 3;
         private decimal _minimumGapSize = 0.001m;
         private readonly RollingWindow<TradeBar> rollingWindowsCandle15m = new RollingWindow<TradeBar>(200);
@@ -47,8 +49,8 @@ namespace QuantConnect.Algorithm.CSharp
         public override void Initialize()
         {
             SetStartDate(2025, 01, 01);
-            SetEndDate(2025, 05, 05);
-            SetCash(1000);
+            SetEndDate(2025, 04, 04);
+            SetCash(10000);
             
             Symbols.Add(AddData<AAAMinute15>(symbolName).Symbol);
             Symbols.Add(AddData<AAAHour4>(symbolName).Symbol);
@@ -56,6 +58,7 @@ namespace QuantConnect.Algorithm.CSharp
             // Symbols.Add(AddData<AAADaily>(symbolName).Symbol);
 
             symbol = AddCfd(symbolName).Symbol;
+            // symbol = AddForex(symbolName).Symbol;
             
             // AddData<AAAMinute15>(xauusdSymbolMinute5);
 
@@ -68,6 +71,7 @@ namespace QuantConnect.Algorithm.CSharp
             macd15m = new MovingAverageConvergenceDivergence(symbolName, 12, 26, 9);
             macd15m.Window.Size = 200;
             macd4h = new MovingAverageConvergenceDivergence(symbolName, 12, 26, 9);
+            pivotIndicator = new AAAPivotPointStandardIndicator(symbolName);
             
             // macd15m = new MovingAverageConvergenceDivergence(symbolName, 8, 17, 5);
             // macd4h = new MovingAverageConvergenceDivergence(symbolName, 10, 21, 6);
@@ -103,6 +107,7 @@ namespace QuantConnect.Algorithm.CSharp
                     xauusdData = minute.ToTradeBarWithoutSymbol();
                     macd15m.Update(xauusdData);
                     srsi15m.Update(xauusdData);
+                    pivotIndicator.Update(xauusdData);
                     Plot(symbolName, Symbols[0], xauusdData);
                     // Securities[symbol].SetMarketPrice(xauusdData);
                     Securities[symbol].Update(new List<BaseData> { minute.ToTradeBar() }, xauusdData.GetType());
@@ -205,14 +210,25 @@ namespace QuantConnect.Algorithm.CSharp
                             }
                         }
                         else if (
-                            currentHistogram15m < 0
-                            || (currentHistogram15m * 1.25m) - previousHistogram15m < 0
-                            || macd15m.Current.Value < macd15m.Signal.Current.Value
-                            || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
-                            || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
-                            || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
-                            || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
-                            || currentK15m + 5 < currentD15m
+                            // currentHistogram15m < 0
+                            // || (currentHistogram15m * 1.25m) - previousHistogram15m < 0
+                            // || macd15m.Current.Value < macd15m.Signal.Current.Value
+                            // || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
+                            // || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
+                            // || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
+                            // || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
+                            // || currentK15m + 5 < currentD15m
+                            xauusdData.Close >= pivotIndicator.R1 ||
+                            xauusdData.Close >= pivotIndicator.R2 ||
+                            xauusdData.Close >= pivotIndicator.R3 ||
+                            xauusdData.Close >= pivotIndicator.R4 ||
+                            xauusdData.Close >= pivotIndicator.R5 
+                            // ||
+                            // xauusdData.Close >= pivotIndicator.S1 ||
+                            // xauusdData.Close >= pivotIndicator.S2 ||
+                            // xauusdData.Close >= pivotIndicator.S3 ||
+                            // xauusdData.Close >= pivotIndicator.S4 ||
+                            // xauusdData.Close >= pivotIndicator.S5
                             )
                         {
                             Liquidate(symbolName); // Exit position   
