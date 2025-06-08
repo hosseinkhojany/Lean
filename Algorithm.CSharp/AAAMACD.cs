@@ -28,7 +28,8 @@ namespace QuantConnect.Algorithm.CSharp
         
         private int _lookbackPeriod = 3;
         private decimal _minimumGapSize = 0.001m;
-        private readonly RollingWindow<TradeBar> rollingWindowsCandle15m = new RollingWindow<TradeBar>(200);
+        private RollingWindow<TradeBar> rollingWindowsCandle15m = new RollingWindow<TradeBar>(200);
+        private RollingWindow<TradeBar> rollingWindowsCandle2h = new RollingWindow<TradeBar>(200);
         
         private decimal? previousHistogram15m = null;
         private decimal? previousK15m = null;
@@ -53,7 +54,7 @@ namespace QuantConnect.Algorithm.CSharp
             SetCash(10000);
             
             Symbols.Add(AddData<AAAMinute15>(symbolName).Symbol);
-            Symbols.Add(AddData<AAAHour4>(symbolName).Symbol);
+            Symbols.Add(AddData<AAAHour2>(symbolName).Symbol);
             // Symbols.Add(AddData<AAAMinute5>(symbolName).Symbol);
             // Symbols.Add(AddData<AAADaily>(symbolName).Symbol);
 
@@ -90,213 +91,219 @@ namespace QuantConnect.Algorithm.CSharp
             marketOpen15MinuteTimeCheck = false;
             Liquidate();
         }
-        
-        
+
+
 
         public override void OnData(Slice data)
         {
-            if (data.First().Value is AAAMinute5 || data.First().Value is AAAMinute15 || data.First().Value is AAAHour4)
+            TradeBar xauusdData = new TradeBar();
+            if (data.First().Value is AAAMinute15 minute15)
             {
-                TradeBar xauusdData = new TradeBar();
-                if (data.First().Value is AAAMinute15 minute)
+                // var offsetProvider = GetTimeZoneOffsetProvider(symbol);
+                // var now = TimeProvider.GetUtcNow();
+                // var exchangeTime = offsetProvider.ConvertFromUtc(now);
+                // minute.Time = exchangeTime;
+                xauusdData = minute15.ToTradeBarWithoutSymbol();
+                macd15m.Update(xauusdData);
+                srsi15m.Update(xauusdData);
+                pivotIndicator.Update(xauusdData);
+                rollingWindowsCandle15m.Add(xauusdData);
+                Plot(symbolName, Symbols[0], xauusdData);
+                // Securities[symbol].SetMarketPrice(xauusdData);
+                Securities[symbol].Update(new List<BaseData> { minute15.ToTradeBar() }, xauusdData.GetType());
+
+                if (first15MinuteCandleOfStartOfDay == null ||
+                    xauusdData.Time.Date.Day != first15MinuteCandleOfStartOfDay.Time.Date.Day)
                 {
-                    // var offsetProvider = GetTimeZoneOffsetProvider(symbol);
-                    // var now = TimeProvider.GetUtcNow();
-                    // var exchangeTime = offsetProvider.ConvertFromUtc(now);
-                    // minute.Time = exchangeTime;
-                    xauusdData = minute.ToTradeBarWithoutSymbol();
-                    macd15m.Update(xauusdData);
-                    srsi15m.Update(xauusdData);
-                    pivotIndicator.Update(xauusdData);
-                    Plot(symbolName, Symbols[0], xauusdData);
-                    // Securities[symbol].SetMarketPrice(xauusdData);
-                    Securities[symbol].Update(new List<BaseData> { minute.ToTradeBar() }, xauusdData.GetType());
-                    
-                    if (first15MinuteCandleOfStartOfDay == null || xauusdData.Time.Date.Day != first15MinuteCandleOfStartOfDay.Time.Date.Day)
+                    Console.WriteLine(xauusdData.Time);
+                    first15MinuteCandleOfStartOfDay = xauusdData;
+                }
+            }
+            else if (data.First().Value is AAAHour2 hour)
+            {
+                xauusdData = hour.ToTradeBarWithoutSymbol();
+                macd4h.Update(xauusdData);
+                srsi4h.Update(xauusdData);
+                rollingWindowsCandle2h.Add(xauusdData);
+                Plot(symbolName, Symbols[1], xauusdData);
+                Securities[symbol].Update(new List<BaseData> { hour.ToTradeBar() }, xauusdData.GetType());
+            }
+            else if (data.First().Value is AAAMinute5 minute5)
+            {
+                xauusdData = minute5.ToTradeBarWithoutSymbol();
+                Plot(symbolName, Symbols[2], xauusdData);
+            }
+            else if (data.First().Value is AAADaily daily)
+            {
+                xauusdData = daily.ToTradeBarWithoutSymbol();
+                Plot(symbolName, Symbols[3], xauusdData);
+            }
+
+            openPositionBuy15m ??= xauusdData;
+            openPositionSell15m ??= xauusdData;
+
+
+            if (IsWarmingUp) return;
+
+            if (macd15m.IsReady && srsi15m.IsReady && macd4h.IsReady && srsi4h.IsReady)
+            {
+                decimal currentHistogram15m = macd15m.Histogram.Current.Value;
+                decimal currentK15m = srsi15m.K.Current.Value;
+                decimal currentD15m = srsi15m.D.Current.Value;
+
+                decimal currentHistogram4h = macd4h.Histogram.Current.Value;
+                decimal currentK4h = srsi4h.K.Current.Value;
+                decimal currentD4h = srsi4h.D.Current.Value;
+
+                // decimal currentHistogram = macd15m.Current.Value;
+                // decimal currentHistogram = macd15m.Signal.Current.Value;
+
+                if (previousHistogram15m.HasValue && previousHistogram4h.HasValue)
+                {
+
+                    DateTime targetDate = DateTime.Parse("2022-07-21 11:30:00", DateTimeFormatInfo.CurrentInfo);
+                    if (
+                        xauusdData.Time.Year == targetDate.Year &&
+                        xauusdData.Time.Month == targetDate.Month &&
+                        xauusdData.Time.Day == targetDate.Day &&
+                        xauusdData.Time.Hour == targetDate.Hour
+                        // && xauusdData.Time.Minute == targetDate.Minute
+                    )
                     {
-                        Console.WriteLine(xauusdData.Time);
-                        first15MinuteCandleOfStartOfDay = xauusdData;
+                        Console.WriteLine("");
                     }
-                }
-                else if(data.First().Value is AAAHour4 hour)
-                {
-                    xauusdData = hour.ToTradeBarWithoutSymbol();
-                    macd4h.Update(xauusdData);
-                    srsi4h.Update(xauusdData);
-                    Plot(symbolName, Symbols[1], xauusdData);
-                    Securities[symbol].Update(new List<BaseData> { hour.ToTradeBar() }, xauusdData.GetType());
-                }
-                else if(data.First().Value is AAAMinute5 minute5)
-                {
-                    xauusdData = minute5.ToTradeBarWithoutSymbol();
-                    Plot(symbolName, Symbols[2], xauusdData);
-                }
-                else if(data.First().Value is AAADaily daily)
-                {
-                    xauusdData = daily.ToTradeBarWithoutSymbol();
-                    Plot(symbolName, Symbols[3], xauusdData);
-                }
 
-                openPositionBuy15m ??= xauusdData;
-                openPositionSell15m ??= xauusdData;
-
-
-                if (IsWarmingUp) return;
-                
-                if (macd15m.IsReady && srsi15m.IsReady && macd4h.IsReady && srsi4h.IsReady)
-                {
-                    decimal currentHistogram15m = macd15m.Histogram.Current.Value;
-                    decimal currentK15m = srsi15m.K.Current.Value;
-                    decimal currentD15m = srsi15m.D.Current.Value;
-                    
-                    decimal currentHistogram4h = macd4h.Histogram.Current.Value;
-                    decimal currentK4h = srsi4h.K.Current.Value;
-                    decimal currentD4h = srsi4h.D.Current.Value;
-                    
-                    // decimal currentHistogram = macd15m.Current.Value;
-                    // decimal currentHistogram = macd15m.Signal.Current.Value;
-
-                    if (previousHistogram15m.HasValue && previousHistogram4h.HasValue)
+                    //---------------------------------------------BUY
+                    var filteredWindowMacd15m =
+                        macd15m.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                    decimal biggestD15mFromOpenPosition = 0;
+                    var filteredWindowD15m =
+                        srsi15m.D.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                    if (filteredWindowD15m.Count > 0)
                     {
-                        
-                        DateTime targetDate = DateTime.Parse("2022-07-21 11:30:00", DateTimeFormatInfo.CurrentInfo);
-                        if (
-                            xauusdData.Time.Year == targetDate.Year &&
-                            xauusdData.Time.Month == targetDate.Month &&
-                            xauusdData.Time.Day == targetDate.Day &&
-                            xauusdData.Time.Hour == targetDate.Hour 
-                            // && xauusdData.Time.Minute == targetDate.Minute
+                        biggestD15mFromOpenPosition = filteredWindowD15m.Max(data => data.Value);
+                    }
+
+                    decimal biggestK15mFromOpenPosition = 0;
+                    var filteredWindowK15m =
+                        srsi15m.K.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
+                    if (filteredWindowK15m.Count > 0)
+                    {
+                        biggestK15mFromOpenPosition = filteredWindowK15m.Max(data => data.Value);
+                    }
+
+                    if (
+                        currentHistogram4h > -1 ||
+
+                            (macd4h.Current.Value > 6 &&
+                            macd4h.Signal.Current.Value > 6 &&
+                            currentHistogram4h > previousHistogram4h &&
+                        currentHistogram15m > 0.8m) ||
+
+                        (currentHistogram15m - previousHistogram15m > 0 &&
+                        macd15m.Current.Value > macd15m.Signal.Current.Value &&
+                        currentK15m > 51 &&
+                        currentD15m > 51 &&
+                        currentK15m > currentD15m
                         )
+                    )
+                    {
+                        if (!Portfolio.Invested)
                         {
+                            // printWhenEntry();
+                            Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
+                            openPositionBuy15m = xauusdData;
+                            orderTicket = MarketOrder(symbol, 1, tag: "%=2");
                             Console.WriteLine("");
                         }
-                        
-                        //---------------------------------------------BUY
-                          var filteredWindowMacd15m = macd15m.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
-                        decimal biggestD15mFromOpenPosition = 0;
-                        var filteredWindowD15m = srsi15m.D.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
-                        if (filteredWindowD15m.Count > 0)
-                        {
-                            biggestD15mFromOpenPosition = filteredWindowD15m.Max(data => data.Value);
-                        }
-
-                        decimal biggestK15mFromOpenPosition = 0;
-                        var filteredWindowK15m = srsi15m.K.Window.Where(data => data.Time > openPositionBuy15m.Time).ToList();
-                        if (filteredWindowK15m.Count > 0)
-                        {
-                            biggestK15mFromOpenPosition = filteredWindowK15m.Max(data => data.Value);
-                        }
-
-                        if (
-                            (currentHistogram4h > -1 || 
-                            macd4h.Current.Value > 6 &&
-                            macd4h.Signal.Current.Value > 6 &&
-                            currentHistogram4h > previousHistogram4h) &&
-                            currentHistogram15m > 0.8m &&
-                            currentHistogram15m - previousHistogram15m > 0 &&
-                            macd15m.Current.Value > macd15m.Signal.Current.Value &&
-                            currentK15m > 51 &&
-                            currentD15m > 51 &&
-                            currentK15m > currentD15m
-                            )
-                        {
-                            if (!Portfolio.Invested)
-                            {
-                                // printWhenEntry();
-                                Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
-                                openPositionBuy15m = xauusdData;
-                                orderTicket = MarketOrder(symbol, 1, tag: "%=2");
-                                Console.WriteLine("");
-                            }
-                        }
-                        else if (
-                            // currentHistogram15m < 0
-                            // || (currentHistogram15m * 1.25m) - previousHistogram15m < 0
-                            // || macd15m.Current.Value < macd15m.Signal.Current.Value
-                            // || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
-                            // || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
-                            // || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
-                            // || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
-                            // || currentK15m + 5 < currentD15m
-                            xauusdData.Close >= pivotIndicator.R1 ||
-                            xauusdData.Close >= pivotIndicator.R2 ||
-                            xauusdData.Close >= pivotIndicator.R3 ||
-                            xauusdData.Close >= pivotIndicator.R4 ||
-                            xauusdData.Close >= pivotIndicator.R5 
-                            // ||
-                            // xauusdData.Close >= pivotIndicator.S1 ||
-                            // xauusdData.Close >= pivotIndicator.S2 ||
-                            // xauusdData.Close >= pivotIndicator.S3 ||
-                            // xauusdData.Close >= pivotIndicator.S4 ||
-                            // xauusdData.Close >= pivotIndicator.S5
-                            )
-                        {
-                            Liquidate(symbolName); // Exit position   
-                        }
-                        //---------------------------------------------BUY
-
-
-
-
-                        // //---------------------------------------------SELL
-                        // decimal smallestD15mFromOpenPosition = 0;
-                        // var filteredWindowD15mSell = srsi15m.D.Window.Where(data => data.Time > openPositionSell15m.Time).ToList();
-                        // if (filteredWindowD15mSell.Count > 0)
-                        // {
-                        //     smallestD15mFromOpenPosition = filteredWindowD15mSell.Min(data => data.Value);
-                        // }
-                        //
-                        // decimal smallestK15mFromOpenPosition = 0;
-                        // var filteredWindowK15mSell = srsi15m.K.Window.Where(data => data.Time > openPositionSell15m.Time).ToList();
-                        // if (filteredWindowK15mSell.Count > 0)
-                        // {
-                        //     smallestK15mFromOpenPosition = filteredWindowK15mSell.Min(data => data.Value);
-                        // }
-                        //
-                        // if (
-                        //     currentHistogram4h < 0 &&
-                        //     currentHistogram15m < -0.8m &&
-                        //     currentHistogram15m - previousHistogram15m < 0 &&
-                        //     macd15m.Current.Value < macd15m.Signal.Current.Value &&
-                        //     currentK15m < 49 &&
-                        //     currentD15m < 49 && 
-                        //     currentK15m < currentD15m
-                        // )
-                        // {
-                        //     if (!Portfolio.Invested)
-                        //     {
-                        //         Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
-                        //         openPositionSell15m = xauusdData;
-                        //         OrderTicket ticket = MarketOrder(symbol, -1, tag: "%=2");
-                        //         Console.WriteLine("");
-                        //     }
-                        // }
-                        // else if (
-                        //     currentHistogram15m > 0 ||
-                        //     (currentHistogram15m * 1.25m) - previousHistogram15m > 0 ||
-                        //     macd15m.Current.Value > macd15m.Signal.Current.Value ||
-                        //     (currentK15m >= 50 && smallestK15mFromOpenPosition is < 47 and > 20) ||
-                        //     (currentD15m >= 50 && smallestD15mFromOpenPosition is < 47 and > 20) ||
-                        //     (currentK15m >= 20 && smallestK15mFromOpenPosition is >= 0 and < 20) ||
-                        //     (currentD15m >= 20 && smallestD15mFromOpenPosition is >= 0 and < 20) ||
-                        //     currentK15m - 5 > currentD15m
-                        // )
-                        // {
-                        //     Liquidate(symbolName);
-                        // }
-                        // //---------------------------------------------SELL
                     }
+                    else if (
+                        // currentHistogram15m < 0
+                        // || (currentHistogram15m * 1.25m) - previousHistogram15m < 0
+                        // || macd15m.Current.Value < macd15m.Signal.Current.Value
+                        // || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
+                        // || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
+                        // || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
+                        // || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
+                        // || currentK15m + 5 < currentD15m
+                        xauusdData.Close >= pivotIndicator.R1 ||
+                        xauusdData.Close >= pivotIndicator.R2 ||
+                        xauusdData.Close >= pivotIndicator.R3 ||
+                        xauusdData.Close >= pivotIndicator.R4 ||
+                        xauusdData.Close >= pivotIndicator.R5
+                        // ||
+                        // xauusdData.Close >= pivotIndicator.S1 ||
+                        // xauusdData.Close >= pivotIndicator.S2 ||
+                        // xauusdData.Close >= pivotIndicator.S3 ||
+                        // xauusdData.Close >= pivotIndicator.S4 ||
+                        // xauusdData.Close >= pivotIndicator.S5
+                    )
+                    {
+                        Liquidate(symbolName); // Exit position   
+                    }
+                    //---------------------------------------------BUY
 
-                    previousHistogram15m = currentHistogram15m; // Update previous value
-                    previousK15m = currentK15m; // Update previous value
-                    previousD15m = currentD15m; // Update previous value
-                    previousHistogram4h = currentHistogram4h; // Update previous value
-                    previousK4h = currentK4h; // Update previous value
-                    previousD4h = currentD4h; // Update previous value
-                    
+
+
+
+                    // //---------------------------------------------SELL
+                    // decimal smallestD15mFromOpenPosition = 0;
+                    // var filteredWindowD15mSell = srsi15m.D.Window.Where(data => data.Time > openPositionSell15m.Time).ToList();
+                    // if (filteredWindowD15mSell.Count > 0)
+                    // {
+                    //     smallestD15mFromOpenPosition = filteredWindowD15mSell.Min(data => data.Value);
+                    // }
+                    //
+                    // decimal smallestK15mFromOpenPosition = 0;
+                    // var filteredWindowK15mSell = srsi15m.K.Window.Where(data => data.Time > openPositionSell15m.Time).ToList();
+                    // if (filteredWindowK15mSell.Count > 0)
+                    // {
+                    //     smallestK15mFromOpenPosition = filteredWindowK15mSell.Min(data => data.Value);
+                    // }
+                    //
+                    // if (
+                    //     currentHistogram4h < 0 &&
+                    //     currentHistogram15m < -0.8m &&
+                    //     currentHistogram15m - previousHistogram15m < 0 &&
+                    //     macd15m.Current.Value < macd15m.Signal.Current.Value &&
+                    //     currentK15m < 49 &&
+                    //     currentD15m < 49 && 
+                    //     currentK15m < currentD15m
+                    // )
+                    // {
+                    //     if (!Portfolio.Invested)
+                    //     {
+                    //         Log($"Attempting to place order for {symbol} with quantity 1. Cash: {Portfolio.Cash}");
+                    //         openPositionSell15m = xauusdData;
+                    //         OrderTicket ticket = MarketOrder(symbol, -1, tag: "%=2");
+                    //         Console.WriteLine("");
+                    //     }
+                    // }
+                    // else if (
+                    //     currentHistogram15m > 0 ||
+                    //     (currentHistogram15m * 1.25m) - previousHistogram15m > 0 ||
+                    //     macd15m.Current.Value > macd15m.Signal.Current.Value ||
+                    //     (currentK15m >= 50 && smallestK15mFromOpenPosition is < 47 and > 20) ||
+                    //     (currentD15m >= 50 && smallestD15mFromOpenPosition is < 47 and > 20) ||
+                    //     (currentK15m >= 20 && smallestK15mFromOpenPosition is >= 0 and < 20) ||
+                    //     (currentD15m >= 20 && smallestD15mFromOpenPosition is >= 0 and < 20) ||
+                    //     currentK15m - 5 > currentD15m
+                    // )
+                    // {
+                    //     Liquidate(symbolName);
+                    // }
+                    // //---------------------------------------------SELL
                 }
 
+                previousHistogram15m = currentHistogram15m; // Update previous value
+                previousK15m = currentK15m; // Update previous value
+                previousD15m = currentD15m; // Update previous value
+                previousHistogram4h = currentHistogram4h; // Update previous value
+                previousK4h = currentK4h; // Update previous value
+                previousD4h = currentD4h; // Update previous value
+
             }
+
         }
 
         public void printWhenEntry()
