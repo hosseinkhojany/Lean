@@ -50,5 +50,33 @@ namespace QuantConnect.Algorithm.CSharp
 
                 return data;
             }
+
+        public TradeBar ToTradeBar()
+        {
+            return new TradeBar
+            {
+                Time = this.Time,
+                Open = this.Open,
+                High = this.High,
+                Low = this.Low,
+                Close = this.Close,
+                Volume = this.Volume,
+                Value = this.Value,
+                Symbol = this.Symbol
+            };
         }
+        public TradeBar ToTradeBarWithoutSymbol()
+        {
+            return new TradeBar
+            {
+                Time = this.Time,
+                Open = this.Open,
+                High = this.High,
+                Low = this.Low,
+                Close = this.Close,
+                Volume = this.Volume,
+                Value = this.Value,
+            };
+        }
+    }
 }
