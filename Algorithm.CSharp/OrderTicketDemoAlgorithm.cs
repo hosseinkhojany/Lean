@@ -20,8 +20,6 @@ using QuantConnect.Data;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
 using System.Linq;
-using QuantConnect.Data.Market;
-using QuantConnect.Algorithm.CSharp.Benchmarks;
 
 namespace QuantConnect.Algorithm.CSharp
 {
@@ -43,7 +41,6 @@ namespace QuantConnect.Algorithm.CSharp
         private readonly List<OrderTicket> _openStopLimitOrders = new List<OrderTicket>();
         private readonly List<OrderTicket> _openTrailingStopOrders = new List<OrderTicket>();
 
-        Dictionary<string, List<TradeBar>> series = new();
         /// <summary>
         /// Initialise the data and resolution required, as well as the cash and start-end dates for your algorithm. All algorithms must initialized.
         /// </summary>
@@ -54,7 +51,6 @@ namespace QuantConnect.Algorithm.CSharp
             SetCash(100000);             //Set Strategy Cash
             // Find more symbols here: http://quantconnect.com/data
             AddSecurity(SecurityType.Equity, symbol, Resolution.Minute);
-            series[symbol] = new List<TradeBar>();
         }
 
         /// <summary>
@@ -63,38 +59,33 @@ namespace QuantConnect.Algorithm.CSharp
         /// <param name="data">Slice object keyed by symbol containing the stock data</param>
         public override void OnData(Slice slice)
         {
-
-            if (slice.Count == 0) return;
-
-            series[symbol].Add(slice.Get<TradeBar>(symbol));
-
             // MARKET ORDERS
 
-            MarketOrders(slice.Get<TradeBar>(symbol));
+            MarketOrders();
 
             // LIMIT ORDERS
 
-            //LimitOrders();
+            LimitOrders();
 
             // STOP MARKET ORDERS
 
-            //StopMarketOrders();
+            StopMarketOrders();
 
             // STOP LIMIT ORDERS
 
-            //StopLimitOrders();
+            StopLimitOrders();
 
             // TRAILING STOP ORDERS
 
-            //TrailingStopOrders();
+            TrailingStopOrders();
 
             // MARKET ON OPEN ORDERS
 
-            //MarketOnOpenOrders();
+            MarketOnOpenOrders();
 
             // MARKET ON CLOSE ORDERS
 
-            //MarketOnCloseOrders();
+            MarketOnCloseOrders();
         }
 
         /// <summary>
@@ -102,11 +93,10 @@ namespace QuantConnect.Algorithm.CSharp
         /// they'll fill by the next line of code. This behavior equally applies to live mode.
         /// You can opt out of this behavior by specifying the 'asynchronous' parameter as true.
         /// </summary>
-        private void MarketOrders(TradeBar trde)
+        private void MarketOrders()
         {
-            if (TimeIs(8, 9, 31))
+            if (TimeIs(7, 9, 31))
             {
-                Console.WriteLine("CurrentTrade: " + trde);
                 Log("Submitting MarketOrder");
 
                 // submit a market order to buy 10 shares, this function returns an OrderTicket object
@@ -122,7 +112,6 @@ namespace QuantConnect.Algorithm.CSharp
                 // the fill before the next time events for your algorithm. here we'll submit the order
                 // asynchronously and try to cancel it, sometimes it will, sometimes it will be filled
                 // first.
-
                 newTicket = MarketOrder(symbol, 10, asynchronous: true);
                 var response = newTicket.Cancel("Attempt to cancel async order");
                 if (response.IsSuccess)
@@ -133,9 +122,6 @@ namespace QuantConnect.Algorithm.CSharp
                 {
                     Log("Unable to cancel async market order: " + response.ErrorCode);
                 }
-            }
-            else if (TimeIs(8, 14, 01)) {
-                Liquidate(symbol);
             }
         }
 
@@ -586,31 +572,31 @@ namespace QuantConnect.Algorithm.CSharp
             var openOrderTickets = Transactions.GetOpenOrderTickets(basicOrderTicketFilter);
             var remainingOpenOrders = Transactions.GetOpenOrdersRemainingQuantity(basicOrderTicketFilter);
 
-            //if (filledOrders.Count() != 9 || orderTickets.Count() != 12)
-            //{
-            //    throw new RegressionTestException($"There were expected 9 filled orders and 12 order tickets");
-            //}
-            //if (openOrders.Count != 0 || openOrderTickets.Any())
-            //{
-            //    throw new RegressionTestException($"No open orders or tickets were expected");
-            //}
-            //if (remainingOpenOrders != 0m)
-            //{
-            //    throw new RegressionTestException($"No remaining quantity to be filled from open orders was expected");
-            //}
+            if (filledOrders.Count() != 9 || orderTickets.Count() != 12)
+            {
+                throw new RegressionTestException($"There were expected 9 filled orders and 12 order tickets");
+            }
+            if (openOrders.Count != 0 || openOrderTickets.Any())
+            {
+                throw new RegressionTestException($"No open orders or tickets were expected");
+            }
+            if (remainingOpenOrders != 0m)
+            {
+                throw new RegressionTestException($"No remaining quantity to be filled from open orders was expected");
+            }
 
             var symbolOpenOrders = Transactions.GetOpenOrders(symbol).Count;
             var symbolOpenOrdersTickets = Transactions.GetOpenOrderTickets(symbol).Count();
             var symbolOpenOrdersRemainingQuantity = Transactions.GetOpenOrdersRemainingQuantity(symbol);
 
-            //if (symbolOpenOrders != 0 || symbolOpenOrdersTickets != 0)
-            //{
-            //    throw new RegressionTestException($"No open orders or tickets were expected");
-            //}
-            //if (symbolOpenOrdersRemainingQuantity != 0)
-            //{
-            //    throw new RegressionTestException($"No remaining quantity to be filled from open orders was expected");
-            //}
+            if (symbolOpenOrders != 0 || symbolOpenOrdersTickets != 0)
+            {
+                throw new RegressionTestException($"No open orders or tickets were expected");
+            }
+            if (symbolOpenOrdersRemainingQuantity != 0)
+            {
+                throw new RegressionTestException($"No remaining quantity to be filled from open orders was expected");
+            }
 
             var defaultOrders = Transactions.GetOrders();
             var defaultOrderTickets = Transactions.GetOrderTickets();
@@ -618,20 +604,18 @@ namespace QuantConnect.Algorithm.CSharp
             var defaultOpenOrderTickets = Transactions.GetOpenOrderTickets();
             var defaultOpenOrdersRemaining = Transactions.GetOpenOrdersRemainingQuantity();
 
-            //if (defaultOrders.Count() != 12 || defaultOrderTickets.Count() != 12)
-            //{
-            //    throw new RegressionTestException($"There were expected 12 orders and 12 order tickets");
-            //}
-            //if (defaultOpenOrders.Count != 0 || defaultOpenOrderTickets.Any())
-            //{
-            //    throw new RegressionTestException($"No open orders or tickets were expected");
-            //}
-            //if (defaultOpenOrdersRemaining != 0m)
-            //{
-            //    throw new RegressionTestException($"No remaining quantity to be filled from open orders was expected");
-            //}
-
-            AAAChartLauncher.Launch(series, ["SPY.AAAMinute"], Statistics, false);
+            if (defaultOrders.Count() != 12 || defaultOrderTickets.Count() != 12)
+            {
+                throw new RegressionTestException($"There were expected 12 orders and 12 order tickets");
+            }
+            if (defaultOpenOrders.Count != 0 || defaultOpenOrderTickets.Any())
+            {
+                throw new RegressionTestException($"No open orders or tickets were expected");
+            }
+            if (defaultOpenOrdersRemaining != 0m)
+            {
+                throw new RegressionTestException($"No remaining quantity to be filled from open orders was expected");
+            }
         }
 
         /// <summary>
