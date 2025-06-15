@@ -10,12 +10,14 @@ using QuantConnect.Interfaces;
 using QuantConnect.Orders;
 using QuantConnect.Securities;
 using System.Globalization;
+using MathNet.Numerics;
+using System.Diagnostics;
 
 namespace QuantConnect.Algorithm.CSharp
 {
     internal class AAAMACD : QCAlgorithm, IRegressionAlgorithmDefinition
     {
-        List<Symbol> Symbols = new ();
+        List<string> Symbols = new();
         private string symbolName = "XAUUSD";
         private Symbol symbol;
 
@@ -37,7 +39,6 @@ namespace QuantConnect.Algorithm.CSharp
         private decimal? previousHistogram4h = null;
         private decimal? previousK4h = null;
         private decimal? previousD4h = null;
-        Chart qcChart;
         private TradeBar openPositionBuy15m;
         private TradeBar openPositionSell15m;
         private TradeBar first15MinuteCandleOfStartOfDay;
@@ -47,6 +48,7 @@ namespace QuantConnect.Algorithm.CSharp
         private MarketHoursDatabase _marketHoursDatabase;
         private ConcurrentDictionary<Symbol, TimeZoneOffsetProvider> _symbolExchangeTimeZones = new();
         protected virtual ITimeProvider TimeProvider { get; } = RealTimeProvider.Instance;
+        Dictionary<string, List<TradeBar>> series = new();
         public override void Initialize()
         {
             SetStartDate(2025, 01, 01);
@@ -73,14 +75,16 @@ namespace QuantConnect.Algorithm.CSharp
             macd15m.Window.Size = 200;
             macd4h = new MovingAverageConvergenceDivergence(symbolName, 12, 26, 9);
             pivotIndicator = new AAAPivotPointStandardIndicator(symbolName);
-            
+
             // macd15m = new MovingAverageConvergenceDivergence(symbolName, 8, 17, 5);
             // macd4h = new MovingAverageConvergenceDivergence(symbolName, 10, 21, 6);
-            
+
+
+            for (int i = 0; i < Symbols.Count; i++)
+            {
+                series[Symbols[i]] = new List<TradeBar>();
+            }
             SetWarmUp(5);
-            
-            qcChart = new Chart(symbolName);
-            AddChart(qcChart);
             Settings.DailyPreciseEndTime = false;
             _marketHoursDatabase = MarketHoursDatabase.FromDataFolder();
             Schedule.On(DateRules.WeekEnd(), TimeRules.At(23, 50), OnMarketClose);
@@ -108,7 +112,7 @@ namespace QuantConnect.Algorithm.CSharp
                 srsi15m.Update(xauusdData);
                 pivotIndicator.Update(xauusdData);
                 rollingWindowsCandle15m.Add(xauusdData);
-                Plot(symbolName, Symbols[0], xauusdData);
+                series[Symbols[0]].Add(xauusdData);
                 // Securities[symbol].SetMarketPrice(xauusdData);
                 Securities[symbol].Update(new List<BaseData> { minute15.ToTradeBar() }, xauusdData.GetType());
 
@@ -125,18 +129,18 @@ namespace QuantConnect.Algorithm.CSharp
                 macd4h.Update(xauusdData);
                 srsi4h.Update(xauusdData);
                 rollingWindowsCandle2h.Add(xauusdData);
-                Plot(symbolName, Symbols[1], xauusdData);
+                series[Symbols[1]].Add(xauusdData);
                 Securities[symbol].Update(new List<BaseData> { hour.ToTradeBar() }, xauusdData.GetType());
             }
             else if (data.First().Value is AAAMinute5 minute5)
             {
                 xauusdData = minute5.ToTradeBarWithoutSymbol();
-                Plot(symbolName, Symbols[2], xauusdData);
+                series[Symbols[2]].Add(xauusdData);
             }
             else if (data.First().Value is AAADaily daily)
             {
                 xauusdData = daily.ToTradeBarWithoutSymbol();
-                Plot(symbolName, Symbols[3], xauusdData);
+                series[Symbols[3]].Add(xauusdData);
             }
 
             openPositionBuy15m ??= xauusdData;
@@ -346,16 +350,7 @@ namespace QuantConnect.Algorithm.CSharp
 
         public override void OnEndOfAlgorithm()
         {
-            Dictionary<Symbol, Dictionary<ChartLauncherAnnotationType, IndicatorHistory>> indicatorHistories = new();
-            foreach (var symbol in Symbols)
-            {
-                indicatorHistories[symbol] = new Dictionary<ChartLauncherAnnotationType, IndicatorHistory>();
-                var timePeriodIndicatorHistory = IndicatorHistory(macd15m, symbolName, 
-                    new DateTime(2025, 1, 1),
-                    new DateTime(2025, 4, 4), Resolution.Minute);
-            }
-            
-            AAAChartLauncher.Launch(qcChart, Symbols,indicatorHistories, Statistics,false);
+            AAAChartLauncher.Launch(series, Symbols, Statistics,false);
         }
 
         public bool CanRunLocally { get; } = true;

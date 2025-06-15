@@ -6,6 +6,7 @@ using QuantConnect.Data.Consolidators;
 using QuantConnect.Data.Market;
 using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Indicators;
+using QuantConnect.Indicators.CandlestickPatterns;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
 using QuantConnect.Securities;
@@ -14,18 +15,22 @@ namespace QuantConnect.Algorithm.CSharp;
 
 public class AAATrendAlert : QCAlgorithm, IRegressionAlgorithmDefinition
 {
-    List<Symbol> Symbols = new();
+    List<string> Symbols = new();
     private string symbolName = "XAUUSD";
     private Symbol symbol;
-    Chart qcChart;
     TrendAlertIndicator trendAlertIndicator;
     private SimpleMovingAverage simpleMovingAverage;
     private PivotPointsHighLow pivotHighLow;
+    private Engulfing engulfing;
     HeikinAshi ltHA;
     HeikinAshi mtHA;
     ExponentialMovingAverage mtEMA20;
     private int rangeCount = 0;
     private decimal currentTrend = 0;
+
+    Dictionary<string, List<TradeBar>> series = new();
+    private RollingWindow<TradeBar> rollingWindowsCandle15m = new RollingWindow<TradeBar>(200);
+    private RollingWindow<TradeBar> rollingWindowsCandle2h = new RollingWindow<TradeBar>(200);
 
     public override void Initialize()
     {
@@ -37,22 +42,29 @@ public class AAATrendAlert : QCAlgorithm, IRegressionAlgorithmDefinition
         Symbols.Add(AddData<AAADaily>(symbolName).Symbol);
         Symbols.Add(AddData<AAAMinute15>(symbolName).Symbol);
         symbol = AddCfd(symbolName).Symbol;
-        SetWarmUp(15);
 
-        qcChart = new Chart(symbolName);
-        AddChart(qcChart);
+        for (int i = 0; i < Symbols.Count; i++)
+        {
+            series[Symbols[i]] = new List<TradeBar>();
+        }
+        SetWarmUp(15);
         Settings.DailyPreciseEndTime = false;
         ltHA = new HeikinAshi("LT_HA");
         mtHA = new HeikinAshi("MT_HA");
         mtEMA20 = new ExponentialMovingAverage("MT_EMA20", 20);
         trendAlertIndicator = new TrendAlertIndicator(symbolName, ltHA, mtHA, mtEMA20);
-        simpleMovingAverage = SMA(symbolName, 103);
-        pivotHighLow = PPHL(symbolName,100, 100, 300);
+        simpleMovingAverage = new SimpleMovingAverage(symbolName, 103);
+        pivotHighLow = new PivotPointsHighLow(100, 100);
+        engulfing = new Engulfing(symbolName);
 
 
     }
 
-   
+    private bool TimeIs(int day, int hour, int minute)
+    {
+        return Time.Day == day && Time.Hour == hour && Time.Minute == minute;
+    }
+
 
 
     public override void OnData(Slice slice)
@@ -60,18 +72,22 @@ public class AAATrendAlert : QCAlgorithm, IRegressionAlgorithmDefinition
         if (slice.First().Value is AAAHour2 value)
         {
             TradeBar currentBar = value.ToTradeBarWithoutSymbol();
-            Plot(symbolName, Symbols[0], currentBar);
+            rollingWindowsCandle2h.Add(currentBar);
             Securities[symbol].Update(new List<BaseData> { value.ToTradeBar() }, currentBar.GetType());
-
+            series[Symbols[0]].Add(currentBar);
             mtHA.Update(currentBar);
             mtEMA20.Update(currentBar.Time, currentBar.Close);
             trendAlertIndicator.Update(currentBar);
+            engulfing.Update(currentBar);
 
             if (IsWarmingUp) return;
 
             if (trendAlertIndicator.IsReady)
             {
-                Console.WriteLine(currentBar.Time + " Current.Value:" + trendAlertIndicator.Current.Value );
+                if (TimeIs(3, 8, 00)){
+                    Console.WriteLine();
+                }
+                Console.WriteLine(currentBar.Time + " Current.Value:" + trendAlertIndicator.Current.Value);
                 if (trendAlertIndicator.Current.Value == 1m)
                 {
                     if (!Portfolio.Invested)
@@ -79,10 +95,12 @@ public class AAATrendAlert : QCAlgorithm, IRegressionAlgorithmDefinition
                         var orderTicket = MarketOrder(symbol, 1);
                         Log($"MarketOrder: {orderTicket}");
                     }
+
                     if (currentTrend == -1)
                     {
                         Liquidate(symbolName);
                         var orderTicket = MarketOrder(symbol, 1);
+                        Log($"MarketOrder: {orderTicket}");
                     }
 
                     rangeCount = 0;
@@ -95,10 +113,12 @@ public class AAATrendAlert : QCAlgorithm, IRegressionAlgorithmDefinition
                         var orderTicket = MarketOrder(symbol, -1);
                         Log($"MarketOrder: {orderTicket}");
                     }
+
                     if (currentTrend == 1)
                     {
                         Liquidate(symbolName);
                         var orderTicket = MarketOrder(symbol, -1);
+                        Log($"MarketOrder: {orderTicket}");
                     }
 
                     rangeCount = 0;
@@ -107,6 +127,13 @@ public class AAATrendAlert : QCAlgorithm, IRegressionAlgorithmDefinition
                 else if (trendAlertIndicator.Current.Value == 0m)
                 {
                     rangeCount++;
+                    if (engulfing.IsReady && engulfing.Current.Value == 1)
+                    {
+                        
+                        rangeCount = 0;
+                        return;
+                    }
+
                     if (rangeCount == 5)
                     {
                         Liquidate(symbolName);
@@ -114,27 +141,33 @@ public class AAATrendAlert : QCAlgorithm, IRegressionAlgorithmDefinition
                 }
 
             }
-        }else if (slice.First().Value is AAADaily valuedaily)
+        }
+        else if (slice.First().Value is AAADaily valuedaily)
         {
             TradeBar currentBar = valuedaily.ToTradeBarWithoutSymbol();
-            Plot(symbolName, Symbols[1], currentBar);
+            series[Symbols[1]].Add(currentBar);
             Securities[symbol].Update(new List<BaseData> { valuedaily.ToTradeBar() }, currentBar.GetType());
             ltHA.Update(currentBar);
-        }else if (slice.First().Value is AAAMinute15 aaaMinute15)
+        }
+        else if (slice.First().Value is AAAMinute15 aaaMinute15)
         {
             TradeBar currentBar = aaaMinute15.ToTradeBarWithoutSymbol();
-            Plot(symbolName, Symbols[2], currentBar);
+            rollingWindowsCandle15m.Add(currentBar);
+            series[Symbols[2]].Add(currentBar);
             Securities[symbol].Update(new List<BaseData> { aaaMinute15.ToTradeBar() }, currentBar.GetType());
             simpleMovingAverage.Update(currentBar);
             pivotHighLow.Update(currentBar);
-            Console.WriteLine("Current Bar:"+ currentBar + " "+currentBar.Time);
-            if(simpleMovingAverage.IsReady){
-                Console.WriteLine("Current SMA:"+Math.Round(simpleMovingAverage.Current.Value));
+            Console.WriteLine("Current Bar:" + currentBar + " " + currentBar.Time);
+            if (simpleMovingAverage.IsReady)
+            {
+                Console.WriteLine("Current SMA:" + Math.Round(simpleMovingAverage.Current.Value));
             }
-            if(pivotHighLow.IsReady){
+
+            if (pivotHighLow.IsReady)
+            {
                 if (pivotHighLow.Current.Value != 0)
                 {
-                    Console.WriteLine("Current Pivot:"+Math.Round(pivotHighLow.Current.Value));
+                    Console.WriteLine("Current Pivot:" + Math.Round(pivotHighLow.Current.Value) + " "+currentBar.Time);
                 }
             }
         }
@@ -153,7 +186,7 @@ public class AAATrendAlert : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void OnEndOfAlgorithm()
     {
-        AAAChartLauncher.Launch(qcChart, Symbols, null, Statistics, false);
+        AAAChartLauncher.Launch(series, Symbols, Statistics, false);
     }
 
     public bool CanRunLocally { get; } = true;

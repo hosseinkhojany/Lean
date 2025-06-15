@@ -13,7 +13,7 @@ namespace QuantConnect.Algorithm.CSharp;
 
 public class AAASuperTrend : QCAlgorithm, IRegressionAlgorithmDefinition
 {
-    List<Symbol> Symbols = new ();
+    List<string> Symbols = new();
     private string symbolName = "EURUSD";
     private Symbol symbol;
     Chart qcChart;
@@ -98,7 +98,7 @@ public override void OnData(Slice data)
 
         public override void OnEndOfAlgorithm()
         {
-            AAAChartLauncher.Launch(qcChart, Symbols,null, Statistics,false);
+            AAAChartLauncher.Launch(qcChart.Series, Symbols,Statistics,false);
         }
 
         public bool CanRunLocally { get; } = true;

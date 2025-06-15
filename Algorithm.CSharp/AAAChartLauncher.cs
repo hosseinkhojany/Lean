@@ -16,37 +16,36 @@ using QuantConnect.Configuration;
 
 class AAAChartLauncher
 {
-    public static void Launch(Chart chart, List<Symbol> symbols,
-        Dictionary<Symbol, Dictionary<ChartLauncherAnnotationType, IndicatorHistory>> indicatorHistory,
+
+    private static void Launchh(Dictionary<string, List<TradeBar>> series, List<string> symbols,
         StatisticsResults statisticsResults, bool asFile)
     {
         string path = Config.Get("chart-launcher-path");
         List<ChartLauncherItem> chartLauncherItem = new();
 
-        if (!string.IsNullOrEmpty(path))
+        foreach (var symbol in symbols)
         {
-            if (chart != null)
+            chartLauncherItem.Add(new ChartLauncherItem
+            {
+                Symbol = symbol.ToString(),
+                ChartData = new(),
+                AnnotationData = new(),
+                ExpectedStatistics = new Dictionary<string, string>()
+            });
+        }
+        if(!asFile){
+            if (!series.IsNullOrEmpty())
             {
                 foreach (var symbol in symbols)
                 {
-                    chartLauncherItem.Add(new ChartLauncherItem
+                    foreach (var seriess in series)
                     {
-                        Symbol = symbol.ToString(),
-                        ChartData = new(),
-                        AnnotationData = new(),
-                        ExpectedStatistics = new Dictionary<string, string>()
-                    });
-                }
-
-                foreach (var symbol in symbols)
-                {
-                    foreach (var series in chart.Series)
-                    {
-                        if (series.Key.Contains(symbol.ToString()))
+                        if (symbol.Contains(seriess.Key))
                         {
-                            foreach (ChartLauncherAnnotationType annotationType in Enum.GetValues(typeof(ChartLauncherAnnotationType)))
+                            foreach (ChartLauncherAnnotationType annotationType in Enum.GetValues(
+                                         typeof(ChartLauncherAnnotationType)))
                             {
-                                if (series.Key.Contains(annotationType.ToString()))
+                                if (seriess.Key.Contains(annotationType.ToString()))
                                 {
                                     foreach (var launcherItem in chartLauncherItem)
                                     {
@@ -55,19 +54,20 @@ class AAAChartLauncher
                                             launcherItem.AnnotationData[annotationType] = new List<TradeBar>();
                                         }
 
-                                        foreach (var data in series.Value.Values)
+                                        foreach (var data in seriess.Value)
                                         {
-                                            if (data is Candlestick tradeBar)
+                                            if (data is TradeBar tradeBar)
                                             {
                                                 if (launcherItem.Symbol == symbol)
                                                 {
                                                     launcherItem.AnnotationData[annotationType].Add(new TradeBar
                                                     {
                                                         Time = tradeBar.Time,
-                                                        Open = tradeBar.Open ?? 0,
-                                                        High = tradeBar.High ?? 0,
-                                                        Low = tradeBar.Low ?? 0,
-                                                        Close = tradeBar.Close ?? 0,
+                                                        Open = tradeBar.Open,
+                                                        High = tradeBar.High,
+                                                        Low = tradeBar.Low,
+                                                        Close = tradeBar.Close,
+                                                        Volume = tradeBar.Volume,
                                                         Symbol = symbol
                                                     });
                                                 }
@@ -77,30 +77,43 @@ class AAAChartLauncher
                                 }
                             }
 
-                            if (!asFile)
+                            foreach (var data in seriess.Value)
                             {
-                                foreach (var data in series.Value.Values)
+                                if (data is TradeBar tradeBar)
                                 {
-                                    if (data is Candlestick tradeBar)
+                                    foreach (var launcherItem in chartLauncherItem)
                                     {
-                                        foreach (var launcherItem in chartLauncherItem)
+                                        if (launcherItem.Symbol == symbol)
                                         {
-                                            if (launcherItem.Symbol == symbol)
+                                            launcherItem.ChartData.Add(new TradeBar
                                             {
-                                                launcherItem.ChartData.Add(new TradeBar
-                                                {
-                                                    Time = tradeBar.Time,
-                                                    Open = tradeBar.Open ?? 0,
-                                                    High = tradeBar.High ?? 0,
-                                                    Low = tradeBar.Low ?? 0,
-                                                    Close = tradeBar.Close ?? 0,
-                                                    Symbol = symbol
-                                                });
-                                            }
+                                                Time = tradeBar.Time,
+                                                Open = tradeBar.Open,
+                                                High = tradeBar.High,
+                                                Low = tradeBar.Low,
+                                                Close = tradeBar.Close,
+                                                Volume = tradeBar.Volume,
+                                                Symbol = symbol
+                                            });
                                         }
                                     }
                                 }
                             }
+
+                        }
+                    }
+
+                }
+            }
+            else
+            {
+                foreach (var symbol in symbols)
+                {
+                    foreach (var launcherItem in chartLauncherItem)
+                    {
+                        if (launcherItem.Symbol == symbol)
+                        {
+                            launcherItem.ChartDataFileAsFile = true;
                         }
                     }
                 }
@@ -115,12 +128,13 @@ class AAAChartLauncher
             }
             using (var file = new System.IO.StreamWriter(filePath))
             {
-                if (!asFile)
+                if (asFile)
                 {
-                    var chartLaunchResult = new ChartLaunchResult(statisticsResults, chartLauncherItem);
-                    var json = Newtonsoft.Json.JsonConvert.SerializeObject(chartLaunchResult);
-                    file.WriteLine(json);
+                    chartLauncherItem = [];
                 }
+                var chartLaunchResult = new ChartLaunchResult(statisticsResults, chartLauncherItem);
+                var json = Newtonsoft.Json.JsonConvert.SerializeObject(chartLaunchResult);
+                file.WriteLine(json);
             }
 
             try
@@ -166,6 +180,19 @@ class AAAChartLauncher
                 Console.WriteLine(e);
             }
         }
+            
+    }
+
+    public static void Launch(Dictionary<string, List<TradeBar>> series, List<string> symbols,
+        StatisticsResults statisticsResults, bool asFile)
+    {
+        Launchh(series, symbols, statisticsResults, asFile);
+    }
+
+    public static void Launch(Dictionary<string, BaseSeries> series, List<string> symbols,
+        StatisticsResults statisticsResults, bool asFile)
+    {
+        
     }
 }
 
@@ -186,16 +213,16 @@ class ChartLaunchResult
 class ChartLauncherItem
 {
     public string Symbol;
-    public string ChartDataFilePath;
+    public bool ChartDataFileAsFile;
     public List<TradeBar> ChartData;
     public Dictionary<ChartLauncherAnnotationType, List<TradeBar>> AnnotationData;
     public Dictionary<string, string> ExpectedStatistics;
 
-    public ChartLauncherItem(string symbol, string chartDataFilePath, List<TradeBar> chartData,
+    public ChartLauncherItem(string symbol, bool chartDataFilePath, List<TradeBar> chartData,
         Dictionary<ChartLauncherAnnotationType, List<TradeBar>> annotationData, Dictionary<string, string> expectedStatistics)
     {
         Symbol = symbol;
-        ChartDataFilePath = chartDataFilePath;
+        ChartDataFileAsFile = chartDataFilePath;
         ChartData = chartData;
         AnnotationData = annotationData;
         ExpectedStatistics = expectedStatistics;

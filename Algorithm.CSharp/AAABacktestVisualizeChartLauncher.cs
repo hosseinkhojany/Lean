@@ -16,7 +16,7 @@ namespace QuantConnect.Algorithm.CSharp
 {
     internal class AAABacktestVisualizeChartLauncher : QCAlgorithm, IRegressionAlgorithmDefinition
     {
-        List<Symbol> Symbols = new ();
+        List<string> Symbols = new ();
         private string symbolName = "XAUUSD";
 
         private Engulfing engulfingMinute5;
@@ -165,7 +165,7 @@ namespace QuantConnect.Algorithm.CSharp
 
         public override void OnEndOfAlgorithm()
         {
-            AAAChartLauncher.Launch(qcChart, Symbols, [], Statistics, false);
+            AAAChartLauncher.Launch(qcChart.Series, Symbols, Statistics, false);
         }
 
         public bool CanRunLocally { get; } = true;

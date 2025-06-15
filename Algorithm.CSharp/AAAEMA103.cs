@@ -20,7 +20,7 @@ public class AAAEMA103 : QCAlgorithm, IRegressionAlgorithmDefinition
     private string symbolName = "EURUSD";
     private Symbol symbol;
     private DojiStar testIndicator;
-    List<Symbol> Symbols = new();
+    List<string> Symbols = new();
 
     private SimpleMovingAverage simpleMovingAverage;
     private PivotPointsHighLow pivotHighLow;
@@ -36,7 +36,7 @@ public class AAAEMA103 : QCAlgorithm, IRegressionAlgorithmDefinition
         SetCash(10000);
 
         Symbols.Add(AddData<AAAMinute15>(symbolName).Symbol);
-        symbol = AddCfd(symbolName).Symbol;
+        symbol = AddForex(symbolName).Symbol;
         SetWarmUp(15);
 
         qcChart = new Chart(symbolName);
@@ -59,53 +59,57 @@ public class AAAEMA103 : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void OnData(Slice slice)
     {
-        if (slice.First().Value is AAAMinute15 daily)
+        if (slice.First().Value is AAAMinute15 minute15)
         {
-            TradeBar currentBar = daily.ToTradeBarWithoutSymbol();
+            TradeBar currentBar = minute15.ToTradeBarWithoutSymbol();
             Plot(symbolName, Symbols[0], currentBar);
-            Securities[symbol].Update(new List<BaseData> { daily.ToTradeBar() }, currentBar.GetType());
+            Securities[symbol].Update(new List<BaseData> { minute15.ToTradeBar() }, currentBar.GetType());
             pivotHighLow.Update(currentBar);
             simpleMovingAverage.Update(currentBar);
-            decimal pervious1 = 1;
-            decimal pervious2 = 1;
-            if (simpleMovingAverage.Window.Count > 3) {
-                pervious1 = simpleMovingAverage.Window[simpleMovingAverage.Window.Count - 1];
-                pervious2 = simpleMovingAverage.Window[simpleMovingAverage.Window.Count - 2];
-            }
+
 
             if (IsWarmingUp) return;
+            decimal sumOfRangeOfPreviousPrice = 0;
+            int countSum = 5;
+            for (int i = 2; i < countSum+2; i++)
+            {
+                decimal summer = simpleMovingAverage.Window[simpleMovingAverage.Window.Count - i];
+                sumOfRangeOfPreviousPrice += summer;
+            }
+            sumOfRangeOfPreviousPrice /= countSum;
 
             if (simpleMovingAverage.IsReady)
             {
-                if (simpleMovingAverage.Current.Value == 103 &&
-                    (pervious1 + pervious2 / 2) < simpleMovingAverage.Current.Value)
+
+                if (Math.Round(sumOfRangeOfPreviousPrice, 5) < Math.Round(simpleMovingAverage.Current.Value, 5))
                 {
-                    if (!is50PercentInvested) {
-                        is50PercentInvested = true;
+                    Console.WriteLine(currentBar.Time + " : " + sumOfRangeOfPreviousPrice);
+                    // if (!is50PercentInvested) {
+                    is50PercentInvested = true;
                         var targetPercent = 0.5;
                         var orderQuantity = CalculateOrderQuantity(symbol, targetPercent);
                         MarketOrder(symbol, orderQuantity);
-                    }
+                    // }
                 }
                 else if ((simpleMovingAverage.Current.Value * -1.006m) == Securities[symbol].Price)
                 {
-                    if (!is30PercentInvested)
-                    {
+                    // if (!is30PercentInvested)
+                    // {
                         is30PercentInvested = true;
                         var targetPercent = 0.3;
                         var orderQuantity = CalculateOrderQuantity(symbol, targetPercent);
                         MarketOrder(symbol, orderQuantity);
-                    }
+                    // }
                 }
                 else if ((simpleMovingAverage.Current.Value * -1.007m) == Securities[symbol].Price)
                 {
-                    if (!is30PercentInvested)
-                    {
+                    // if (!is30PercentInvested)
+                    // {
                         is30PercentInvested = true;
                         var targetPercent = 0.2;
                         var orderQuantity = CalculateOrderQuantity(symbol, targetPercent);
                         MarketOrder(symbol, orderQuantity);
-                    }
+                    // }
                 }
                 if ((simpleMovingAverage.Current.Value * 1.006m) == Securities[symbol].Price)
                 {
@@ -155,7 +159,7 @@ public class AAAEMA103 : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void OnEndOfAlgorithm()
     {
-        AAAChartLauncher.Launch(qcChart, Symbols, null, Statistics, false);
+        AAAChartLauncher.Launch(qcChart.Series, Symbols, Statistics, false);
     }
 
     public bool CanRunLocally { get; } = true;

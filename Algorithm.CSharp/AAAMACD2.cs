@@ -16,7 +16,7 @@ namespace QuantConnect.Algorithm.CSharp
 {
     internal class AAAMACD2 : QCAlgorithm, IRegressionAlgorithmDefinition
     {
-        List<Symbol> Symbols = new ();
+        List<string> Symbols = new();
         private string symbolName = "XAUUSD";
 
         private MovingAverageConvergenceDivergence macd;
@@ -193,7 +193,7 @@ namespace QuantConnect.Algorithm.CSharp
                     new DateTime(2025, 1, 1),
                     new DateTime(2025, 4, 4), Resolution.Minute);
             }
-            AAAChartLauncher.Launch(qcChart, Symbols,indicatorHistories, Statistics,false);
+            AAAChartLauncher.Launch(qcChart.Series, Symbols, Statistics,false);
         }
 
         public bool CanRunLocally { get; } = true;

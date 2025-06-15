@@ -1,0 +1,86 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © super-zero-0
+
+//@version=6
+indicator("OHLC - Previous Day Levels", overlay=true)
+
+// User Inputs for Previous High
+highColor         = input.color(color.red, "Previous High Color")
+highWidth         = input.int(2, "Previous High Width", minval=1, maxval=10)
+highLineStyleOpt  = input.string("solid", "Previous High Line Style", options=["solid", "dotted", "dashed"])
+highLineStyle     = highLineStyleOpt == "dotted" ? line.style_dotted : highLineStyleOpt == "dashed" ? line.style_dashed : line.style_solid
+
+// User Inputs for Previous Low
+lowColor          = input.color(color.green, "Previous Low Color")
+lowWidth          = input.int(2, "Previous Low Width", minval=1, maxval=10)
+lowLineStyleOpt   = input.string("solid", "Previous Low Line Style", options=["solid", "dotted", "dashed"])
+lowLineStyle      = lowLineStyleOpt == "dotted" ? line.style_dotted : lowLineStyleOpt == "dashed" ? line.style_dashed : line.style_solid
+
+// User Inputs for Previous Open
+openColor         = input.color(color.blue, "Previous Open Color")
+openWidth         = input.int(2, "Previous Open Width", minval=1, maxval=10)
+openLineStyleOpt  = input.string("solid", "Previous Open Line Style", options=["solid", "dotted", "dashed"])
+openLineStyle     = openLineStyleOpt == "dotted" ? line.style_dotted : openLineStyleOpt == "dashed" ? line.style_dashed : line.style_solid
+
+// User Inputs for Previous Close
+closeColor         = input.color(color.orange, "Previous Close Color")
+closeWidth         = input.int(2, "Previous Close Width", minval=1, maxval=10)
+closeLineStyleOpt  = input.string("solid", "Previous Close Line Style", options=["solid", "dotted", "dashed"])
+closeLineStyle     = closeLineStyleOpt == "dotted" ? line.style_dotted : closeLineStyleOpt == "dashed" ? line.style_dashed : line.style_solid
+
+// Determine if the chart is a daily chart
+isDailyChart = timeframe.isdaily
+
+// Retrieve previous day's levels using daily resolution
+prevHigh  = isDailyChart ? high[1] : request.security(syminfo.tickerid, "D", high, lookahead=barmerge.lookahead_off)
+prevLow   = isDailyChart ? low[1]  : request.security(syminfo.tickerid, "D", low, lookahead=barmerge.lookahead_off)
+prevOpen  = isDailyChart ? open[1] : request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_off)
+prevClose = isDailyChart ? close[1]: request.security(syminfo.tickerid, "D", close, lookahead=barmerge.lookahead_off)
+
+// Detect the start of a new day (true on the first intraday bar of a new day)
+newDay = ta.change(time("D")) != 0
+
+// Persistent line IDs for our rays
+var line highRay  = na
+var line lowRay   = na
+var line openRay  = na
+var line closeRay = na
+
+// Persistent label IDs for our levels
+var label highLabel  = na
+var label lowLabel   = na
+var label openLabel  = na
+var label closeLabel = na
+
+if newDay
+    // Delete previous rays if they exist
+    if not na(highRay)
+        line.delete(highRay)
+    if not na(lowRay)
+        line.delete(lowRay)
+    if not na(openRay)
+        line.delete(openRay)
+    if not na(closeRay)
+        line.delete(closeRay)
+        
+    // Delete previous labels if they exist
+    if not na(highLabel)
+        label.delete(highLabel)
+    if not na(lowLabel)
+        label.delete(lowLabel)
+    if not na(openLabel)
+        label.delete(openLabel)
+    if not na(closeLabel)
+        label.delete(closeLabel)
+        
+    // Draw new horizontal rays with a slight horizontal segment (bar_index+1)
+    highRay  := line.new(x1=bar_index, y1=prevHigh,  x2=bar_index+1, y2=prevHigh,  extend=extend.right, color=highColor,  width=highWidth,  style=highLineStyle)
+    lowRay   := line.new(x1=bar_index, y1=prevLow,   x2=bar_index+1, y2=prevLow,   extend=extend.right, color=lowColor,   width=lowWidth,   style=lowLineStyle)
+    openRay  := line.new(x1=bar_index, y1=prevOpen,  x2=bar_index+1, y2=prevOpen,  extend=extend.right, color=openColor,  width=openWidth,  style=openLineStyle)
+    closeRay := line.new(x1=bar_index, y1=prevClose, x2=bar_index+1, y2=prevClose, extend=extend.right, color=closeColor, width=closeWidth, style=closeLineStyle)
+    
+    // Create new labels for each level at the end of the line (x = bar_index+1) aligned to the right
+    highLabel  := label.new(x=bar_index+1, y=prevHigh,  text="Prev High",  style=label.style_label_right, color=highColor,  textcolor=color.white, size=size.tiny)
+    lowLabel   := label.new(x=bar_index+1, y=prevLow,   text="Prev Low",   style=label.style_label_right, color=lowColor,   textcolor=color.white, size=size.tiny)
+    openLabel  := label.new(x=bar_index+1, y=prevOpen,  text="Prev Open",  style=label.style_label_right, color=openColor,  textcolor=color.white, size=size.tiny)
+    closeLabel := label.new(x=bar_index+1, y=prevClose, text="Prev Close", style=label.style_label_right, color=closeColor, textcolor=color.white, size=size.tiny)

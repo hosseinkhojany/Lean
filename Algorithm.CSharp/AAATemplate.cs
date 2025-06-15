@@ -17,9 +17,11 @@ public class AAATemplate : QCAlgorithm, IRegressionAlgorithmDefinition
     private string symbolName = "XAUUSD";
     private Symbol symbol;
     private DojiStar testIndicator;
-    List<Symbol> Symbols = new();
+    List<string> Symbols = new();
 
-    private Chart qcChart;
+    Dictionary<string, List<TradeBar>> series = new();
+    
+        
 
     public override void Initialize()
     {
@@ -30,12 +32,13 @@ public class AAATemplate : QCAlgorithm, IRegressionAlgorithmDefinition
         Symbols.Add(AddData<AAAHour4>(symbolName).Symbol);
         symbol = AddCfd(symbolName).Symbol;
         SetWarmUp(15);
-
-        qcChart = new Chart(symbolName);
-        AddChart(qcChart);
         Settings.DailyPreciseEndTime = false;
-
         testIndicator = new DojiStar(symbolName);
+
+        for (int i = 0; i < Symbols.Count; i++)
+        {
+            series[Symbols[i]] = new List<TradeBar>();
+        }
 
         Schedule.On(DateRules.WeekEnd(), TimeRules.At(23, 50), OnMarketClose);
     }
@@ -50,7 +53,7 @@ public class AAATemplate : QCAlgorithm, IRegressionAlgorithmDefinition
         if (slice.First().Value is AAAHour4 daily)
         {
             TradeBar currentBar = daily.ToTradeBarWithoutSymbol();
-            Plot(symbolName, Symbols[0], currentBar);
+            series[Symbols[0]].Add(currentBar);
             Securities[symbol].Update(new List<BaseData> { daily.ToTradeBar() }, currentBar.GetType());
             testIndicator.Update(currentBar);
             if (IsWarmingUp) return;
@@ -75,7 +78,7 @@ public class AAATemplate : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void OnEndOfAlgorithm()
     {
-        AAAChartLauncher.Launch(qcChart, Symbols, null, Statistics, false);
+        AAAChartLauncher.Launch(series, Symbols, Statistics, false);
     }
 
     public bool CanRunLocally { get; } = true;

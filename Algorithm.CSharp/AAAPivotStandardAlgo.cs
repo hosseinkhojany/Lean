@@ -19,7 +19,7 @@ public class AAAPivotStandardAlgo : QCAlgorithm, IRegressionAlgorithmDefinition
     private string symbolName = "XAUUSD";
     private Symbol symbol;
     private AAAPivotPointStandardIndicator testIndicator;
-    List<Symbol> Symbols = new();
+    List<string> Symbols = new();
 
     private Chart qcChart;
 
@@ -87,7 +87,7 @@ public class AAAPivotStandardAlgo : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void OnEndOfAlgorithm()
     {
-        AAAChartLauncher.Launch(qcChart, Symbols, null, Statistics, false);
+        AAAChartLauncher.Launch(qcChart.Series, Symbols,  Statistics, false);
     }
 
     public bool CanRunLocally { get; } = true;

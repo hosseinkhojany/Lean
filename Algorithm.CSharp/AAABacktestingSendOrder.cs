@@ -75,7 +75,6 @@ namespace QuantConnect.Algorithm.CSharp
         public override void OnEndOfAlgorithm()
         {
             var w = Statistics;
-            AAAChartLauncher.Launch(null, [], [], Statistics, false);
         }
         
 

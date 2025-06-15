@@ -13,7 +13,7 @@ using System.Linq;
 
 public class AAATrendAlertGBT : QCAlgorithm, IRegressionAlgorithmDefinition
 {
-    List<Symbol> Symbols = new();
+    List<string> Symbols = new();
     private string symbolName = "XAUUSD";
     private Symbol symbol;
     Chart qcChart;
@@ -150,7 +150,7 @@ public class AAATrendAlertGBT : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void OnEndOfAlgorithm()
     {
-        AAAChartLauncher.Launch(qcChart, Symbols, null, Statistics, false);
+        AAAChartLauncher.Launch(qcChart.Series, Symbols, Statistics, false);
     }
 
     public bool CanRunLocally { get; } = true;
