@@ -1,0 +1,8 @@
+//@version=6
+indicator("Highlight Tuesdays and Wednesdays", overlay=true)
+
+isTuesday = dayofweek == dayofweek.tuesday
+isWednesday = dayofweek == dayofweek.wednesday
+
+bgcolor(isTuesday ? color.new(color.orange, 85) : na)
+bgcolor(isWednesday ? color.new(color.blue, 85) : na)

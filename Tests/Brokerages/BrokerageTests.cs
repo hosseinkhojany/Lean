@@ -134,28 +134,8 @@ namespace QuantConnect.Tests.Brokerages
                 security.Holdings.SetHoldings(accountHolding.AveragePrice, accountHolding.Quantity);
             }
             brokerage.OrdersStatusChanged += HandleFillEvents;
-            brokerage.OrderIdChanged += HandleOrderIdChangedEvents;
 
             return brokerage;
-        }
-
-        /// <summary>
-        /// Handles the event triggered when a brokerage order ID has changed.
-        /// Logs the event and forwards it to the order provider for further processing.
-        /// </summary>
-        /// <param name="_">
-        /// The sender of the event (unused).
-        /// </param>
-        /// <param name="brokerageOrderIdChangedEvent">
-        /// The event data containing the updated order ID and brokerage IDs.
-        /// </param>
-        private void HandleOrderIdChangedEvents(object _, BrokerageOrderIdChangedEvent brokerageOrderIdChangedEvent)
-        {
-            Log.Trace("");
-            Log.Trace($"ORDER ID CHANGED: {brokerageOrderIdChangedEvent}");
-            Log.Trace("");
-
-            OrderProvider.HandlerBrokerageOrderIdChangedEvent(brokerageOrderIdChangedEvent);
         }
 
         private void HandleFillEvents(object sender, List<OrderEvent> ordeEvents)
@@ -229,7 +209,6 @@ namespace QuantConnect.Tests.Brokerages
         protected virtual void DisposeBrokerage(IBrokerage brokerage)
         {
             brokerage.OrdersStatusChanged -= HandleFillEvents;
-            brokerage.OrderIdChanged -= HandleOrderIdChangedEvents;
             brokerage.Disconnect();
             brokerage.DisposeSafely();
         }
@@ -480,6 +459,13 @@ namespace QuantConnect.Tests.Brokerages
                 }
             };
 
+            EventHandler<BrokerageOrderIdChangedEvent> brokerageOrderIdChanged = (_, args) =>
+            {
+                order.BrokerId = args.BrokerId;
+                Log.Trace($"ORDER ID CHANGED EVENT: Id = {args.OrderId}, BrokerageId = [{string.Join(',', args.BrokerId)}]");
+            };
+
+            Brokerage.OrderIdChanged += brokerageOrderIdChanged;
             Brokerage.OrdersStatusChanged += brokerageOnOrdersStatusChanged;
 
             var newQuantity = order.Quantity + quantityIncrement;
@@ -528,6 +514,7 @@ namespace QuantConnect.Tests.Brokerages
                 Assert.Fail("Order is not canceled well.");
             }
 
+            Brokerage.OrderIdChanged -= brokerageOrderIdChanged;
             Brokerage.OrdersStatusChanged -= brokerageOnOrdersStatusChanged;
         }
 
@@ -624,7 +611,11 @@ namespace QuantConnect.Tests.Brokerages
                     Assert.Fail("Unexpected order status: " + orderEvent.Status);
                 }
             };
+            EventHandler<BrokerageOrderIdChangedEvent> brokerageOrderIdChanged = (sender, args) => {
+                order.BrokerId = args.BrokerId;
+            };
 
+            Brokerage.OrderIdChanged += brokerageOrderIdChanged;
             Brokerage.OrdersStatusChanged += brokerageOnOrdersStatusChanged;
 
             Log.Trace("");
@@ -658,6 +649,7 @@ namespace QuantConnect.Tests.Brokerages
                 }
             }
 
+            Brokerage.OrderIdChanged -= brokerageOrderIdChanged;
             Brokerage.OrdersStatusChanged -= brokerageOnOrdersStatusChanged;
         }
 
@@ -696,7 +688,11 @@ namespace QuantConnect.Tests.Brokerages
                     desiredStatusEvent.Set();
                 }
             };
+            EventHandler<BrokerageOrderIdChangedEvent> brokerageOrderIdChanged = (sender, args) => {
+                order.BrokerId = args.BrokerId;
+            };
 
+            Brokerage.OrderIdChanged += brokerageOrderIdChanged;
             Brokerage.OrdersStatusChanged += brokerageOnOrdersStatusChanged;
 
             OrderFillEvent.Reset();
@@ -721,6 +717,7 @@ namespace QuantConnect.Tests.Brokerages
                 requiredStatusEvent.WaitOne((int)(1000 * secondsTimeout));
             }
 
+            Brokerage.OrderIdChanged -= brokerageOrderIdChanged;
             Brokerage.OrdersStatusChanged -= brokerageOnOrdersStatusChanged;
 
             return order;

@@ -45,7 +45,6 @@ namespace QuantConnect.Securities
     /// </remarks>
     public class Security : DynamicObject, ISecurityPrice
     {
-        private SecurityExchange _exchange;
         private LocalTimeKeeper _localTimeKeeper;
 
         /// <summary>
@@ -54,11 +53,6 @@ namespace QuantConnect.Securities
         /// </summary>
         /// <remarks>Just use a list + lock, not concurrent bag, avoid garbage it creates for features we don't need here. See https://github.com/dotnet/runtime/issues/23103</remarks>
         private readonly HashSet<SubscriptionDataConfig> _subscriptionsBag;
-
-        /// <summary>
-        /// Flag to keep track of initialized securities, to avoid double initialization.
-        /// </summary>
-        internal bool IsInitialized { get; set; }
 
         /// <summary>
         /// This securities <see cref="IShortableProvider"/>
@@ -202,15 +196,8 @@ namespace QuantConnect.Securities
         /// <seealso cref="ForexExchange"/>
         public SecurityExchange Exchange
         {
-            get => _exchange;
-            set
-            {
-                _exchange = value;
-                if (_localTimeKeeper != null)
-                {
-                    _exchange.SetLocalDateTimeFrontierProvider(_localTimeKeeper);
-                }
-            }
+            get;
+            set;
         }
 
         /// <summary>
@@ -425,7 +412,7 @@ namespace QuantConnect.Securities
             }
 
             Symbol = symbol;
-            _subscriptionsBag = new();
+            _subscriptionsBag = new ();
             QuoteCurrency = quoteCurrency;
             SymbolProperties = symbolProperties;
 
@@ -1102,7 +1089,7 @@ namespace QuantConnect.Securities
                     }
                     if (!subscription.ExchangeTimeZone.Equals(Exchange.TimeZone))
                     {
-                        throw new ArgumentException(Messages.Security.UnmatchingExchangeTimeZones, $"{nameof(subscription)}.{nameof(subscription.ExchangeTimeZone)}");
+                         throw new ArgumentException(Messages.Security.UnmatchingExchangeTimeZones, $"{nameof(subscription)}.{nameof(subscription.ExchangeTimeZone)}");
                     }
                     _subscriptionsBag.Add(subscription);
                 }
@@ -1192,7 +1179,6 @@ namespace QuantConnect.Securities
         /// </summary>
         public virtual void Reset()
         {
-            IsInitialized = false;
             IsTradable = false;
 
             // Reset the subscriptions

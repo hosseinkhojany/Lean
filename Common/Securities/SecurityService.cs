@@ -87,8 +87,6 @@ namespace QuantConnect.Securities
                     existingSecurity.MakeTradable();
                 }
 
-                InitializeSecurity(initializeSecurity, existingSecurity);
-
                 return existingSecurity;
             }
 
@@ -222,7 +220,10 @@ namespace QuantConnect.Securities
             security.AddData(configList);
 
             // invoke the security initializer
-            InitializeSecurity(initializeSecurity, security);
+            if (initializeSecurity)
+            {
+                _securityInitializerProvider.SecurityInitializer.Initialize(security);
+            }
 
             CheckCanonicalSecurityModels(security);
 
@@ -316,15 +317,6 @@ namespace QuantConnect.Securities
                     _modelsMismatchWarningSent = true;
                     _algorithm.Debug($"Warning: Security {security.Symbol} its canonical security {security.Symbol.Canonical} have at least one model of different types (fill, fee, buying power, margin interest rate, slippage, volatility, settlement). To avoid this, consider using a security initializer to set the right models to each security type according to your algorithm's requirements.");
                 }
-            }
-        }
-
-        private void InitializeSecurity(bool initializeSecurity, Security security)
-        {
-            if (initializeSecurity && !security.IsInitialized)
-            {
-                _securityInitializerProvider.SecurityInitializer.Initialize(security);
-                security.IsInitialized = true;
             }
         }
     }

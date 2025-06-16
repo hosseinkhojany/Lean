@@ -525,12 +525,6 @@ namespace QuantConnect.Api
 
             ApiConnection.TryRequest(request, out BacktestResponseWrapper result);
 
-            if (result == null)
-            {
-                // api call failed
-                return null;
-            }
-
             if (!result.Success)
             {
                 // place an empty place holder so we can return any errors back to the user and not just null
@@ -550,7 +544,7 @@ namespace QuantConnect.Api
                         continue;
                     }
 
-                    var chartRequest = new RestRequest("backtests/chart/read", Method.POST)
+                    var chartRequest = new RestRequest("backtests/read", Method.POST)
                     {
                         RequestFormat = DataFormat.Json
                     };
@@ -559,14 +553,13 @@ namespace QuantConnect.Api
                     {
                         projectId,
                         backtestId,
-                        name = chart.Key,
-                        count = 100
+                        chart = chart.Key
                     }), ParameterType.RequestBody);
 
                     // Add this chart to our updated collection
-                    if (ApiConnection.TryRequest(chartRequest, out ReadChartResponse chartResponse) && chartResponse.Success)
+                    if (ApiConnection.TryRequest(chartRequest, out BacktestResponseWrapper chartResponse) && chartResponse.Success)
                     {
-                        updatedCharts.Add(chart.Key, chartResponse.Chart);
+                        updatedCharts.Add(chart.Key, chartResponse.Backtest.Charts[chart.Key]);
                     }
                 }
 

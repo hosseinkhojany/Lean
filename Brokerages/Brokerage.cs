@@ -430,7 +430,12 @@ namespace QuantConnect.Brokerages
         /// <returns>The order position</returns>
         protected static OrderPosition GetOrderPosition(OrderDirection orderDirection, decimal holdingsQuantity)
         {
-            return BrokerageExtensions.GetOrderPosition(orderDirection, holdingsQuantity);
+            return orderDirection switch
+            {
+                OrderDirection.Buy => holdingsQuantity >= 0 ? OrderPosition.BuyToOpen : OrderPosition.BuyToClose,
+                OrderDirection.Sell => holdingsQuantity <= 0 ? OrderPosition.SellToOpen : OrderPosition.SellToClose,
+                _ => throw new ArgumentOutOfRangeException(nameof(orderDirection), orderDirection, "Invalid order direction")
+            };
         }
 
         #region IBrokerageCashSynchronizer implementation
@@ -521,7 +526,7 @@ namespace QuantConnect.Brokerages
                     {
                         // compare in account currency
                         var delta = cash.Amount - balanceCash.Amount;
-                        if (cash.ConversionRate == 0 || Math.Abs(algorithm.Portfolio.CashBook.ConvertToAccountCurrency(delta, cash.Symbol)) > totalPorfolioValueThreshold)
+                        if (Math.Abs(algorithm.Portfolio.CashBook.ConvertToAccountCurrency(delta, cash.Symbol)) > totalPorfolioValueThreshold)
                         {
                             // log the delta between
                             Log.Trace($"Brokerage.PerformCashSync(): {balanceCash.Currency} Delta: {delta:0.00}", true);

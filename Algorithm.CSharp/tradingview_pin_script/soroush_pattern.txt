@@ -1,0 +1,61 @@
+//@version=5
+indicator("Soroush patten ver1-1", overlay=true)
+
+// Inputs
+atrLength = input.int(2, "ATR Length", minval=1)
+rsiLength = input.int(2, "RSI Length", minval=1)
+bigAtrLength = input.int(14, "ATR Big Length", minval=1)
+lengthMultiplier = input.float(2, "Length Multiplier (ATR 14)", minval=0.2, step=0.1)
+
+// New Range Inputs
+startOffset = input.int(30, "Start Offset (candles ago)", minval=0)
+endOffset = input.int(50, "End Offset (candles ago)", minval=1)
+
+// Settings for drawing
+extendLines = input.bool(false, "Extend Lines to Right")
+lineWidth = input.int(2, "Extended Line Width", minval=1)
+connectorWidth = input.int(1, "Connector Line Width", minval=1)
+lineStyleOption = input.string("Dashed", "Line Style", options=["Dashed", "Solid"])
+
+// Line style setup
+lineStyle = lineStyleOption == "Dashed" ? line.style_dashed : line.style_solid
+
+// Body Size Calculation
+bodySize(open, close) => math.abs(close - open)
+
+// Function to calculate the line value using ATR(2) and RSI(2)
+calculateLineValue(atrValue, rsiValue) =>
+    atrValue * ((math.abs(rsiValue - 50) / 10) + 1)
+
+// Function to draw horizontal lines for eligible candles
+drawLines(candleIndex) =>
+    float rsi = ta.rsi(close, rsiLength)[candleIndex]
+    float atrValue = ta.atr(atrLength)[candleIndex]
+    float atrBigValue = ta.atr(bigAtrLength)[candleIndex]
+    float candleBody = bodySize(open[candleIndex], close[candleIndex])
+    
+    if not na(rsi) and not na(atrValue) and not na(atrBigValue) and candleBody >= atrBigValue * lengthMultiplier
+        float lineValue = calculateLineValue(atrValue, rsi)
+        float closePlusLine = close[candleIndex] + lineValue
+        float closeMinusLine = close[candleIndex] - lineValue
+        
+        int x1 = bar_index[candleIndex]
+        int x2 = extendLines ? bar_index + 500 : bar_index[candleIndex] + 1
+        
+        // Draw horizontal extended lines
+        line.new(x1, closePlusLine, x2, closePlusLine, 
+                 color=color.green, width=lineWidth, style=lineStyle)
+        line.new(x1, closeMinusLine, x2, closeMinusLine, 
+                 color=color.red, width=lineWidth, style=lineStyle)
+
+        // Draw vertical connectors
+        line.new(x1, high[candleIndex] + 0.2, x1, closePlusLine,
+                 color=color.green, width=connectorWidth)
+        line.new(x1, high[candleIndex] + 0.2, x1, closeMinusLine,
+                 color=color.red, width=connectorWidth)
+
+// Loop to process eligible candles
+if (startOffset <= endOffset)
+    for i = startOffset to endOffset
+        if i < bar_index
+            drawLines(i)

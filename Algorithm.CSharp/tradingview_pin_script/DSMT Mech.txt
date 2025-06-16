@@ -1,0 +1,98 @@
+//@version=5
+indicator("DSMT Mech",overlay = true)
+
+
+
+//Swings
+var length = input(5)
+
+
+//Swings detection/measurements
+swings_calc(len)=>
+    os = 0    
+    upper = ta.highest(len)
+    lower = ta.lowest(len)
+
+    os := high[len] > upper ? 0 : low[len] < lower ? 1 : os[1]
+    top = os == 0 and os[1] != 0 ? high[len] : 0
+    btm = os == 1 and os[1] != 1 ? low[len] : 0
+    [top, btm]
+//Swings
+[top, btm] = swings_calc(length)
+
+
+
+
+
+//Global variables
+var trend = 0
+
+var top_y = 0., var top_x = 0
+var btm_y = 0., var btm_x = 0
+
+var trail_up = high, var trail_dn = low
+var trail_up_x = 0,  var trail_dn_x = 0
+
+var top_cross = true,  var btm_cross = true
+
+if top
+    top_cross := true
+    top_y := top
+    top_x := bar_index - length
+    trail_up := top
+    trail_up_x := bar_index - length
+    
+
+//Trailing maximum
+trail_up := math.max(high, trail_up)
+trail_up_x := trail_up == high ? bar_index : trail_up_x
+
+if btm
+    btm_cross := true
+    
+    btm_y := btm
+    btm_x := bar_index-length
+    trail_dn := btm
+    trail_dn_x := bar_index-length
+
+
+//Trailing minimum
+trail_dn := math.min(low, trail_dn)
+trail_dn_x := trail_dn == low ? bar_index : trail_dn_x
+
+
+//Detect bullish Structure
+if ta.crossover(close, top_y) and top_cross  
+    if trend < 0 //Trend Reverse
+        choch = true     
+   
+    top_cross := false
+    trend := 1
+
+//Detect bearish Structure
+if ta.crossunder(close, btm_y) and btm_cross
+    if trend > 0//Trend Reverse
+        choch = true
+    
+    btm_cross := false
+    trend := -1
+
+
+
+Trend=trend >0?"G":(0 > trend?"R":"")
+plot(ta.ema(close,21),color = Trend=="G"?color.green:(Trend=="R"?color.red:color.blue),linewidth = 1)
+
+//plot(zigzag,color = color.yellow,offset = -length)
+
+
+
+TrendIsBull=trend >0
+TrendIsBear=0>trend
+
+bull=TrendIsBull and not TrendIsBull[1]
+bear=TrendIsBear and not TrendIsBear[1]
+
+if (bull)
+    line.new(bar_index, close, bar_index, close * 1.01, extend = extend.both, color = color.green, style = line.style_dotted, width = 1)
+if (bear)
+    line.new(bar_index, close, bar_index, close * 1.01, extend = extend.both, color = color.red, style = line.style_dotted, width = 1)

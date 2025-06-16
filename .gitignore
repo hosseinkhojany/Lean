@@ -279,4 +279,10 @@ QuantConnect.Lean.sln.DotSettings*
 Research/Notebooks
 
 #Docker result files
+MODULES/
 Results/
+MtProxyUI/
+mtapi/
+QuantConnect.MetaTrader.ToolBox/
+QuantConnect.MetaTrader/
+QuantConnect.DataSource.MetaTrader/

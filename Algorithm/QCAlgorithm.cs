@@ -58,7 +58,6 @@ using QuantConnect.Commands;
 using Newtonsoft.Json;
 using QuantConnect.Securities.Index;
 using QuantConnect.Api;
-using System.Threading.Tasks;
 
 namespace QuantConnect.Algorithm
 {
@@ -1139,7 +1138,6 @@ namespace QuantConnect.Algorithm
         /// and because Python does not support two methods with the same name</remarks>
         [Obsolete("This method is deprecated and will be removed after August 2021. Please use this overload: OnEndOfDay(Symbol symbol)")]
         [DocumentationAttribute(HandlingData)]
-        [StubsIgnore]
         public virtual void OnEndOfDay()
         {
 
@@ -1154,7 +1152,6 @@ namespace QuantConnect.Algorithm
         /// </remarks>
         /// <param name="symbol">Asset symbol for this end of day event. Forex and equities have different closing hours.</param>
         [DocumentationAttribute(HandlingData)]
-        [StubsIgnore]
         public virtual void OnEndOfDay(string symbol)
         {
         }
@@ -1164,7 +1161,6 @@ namespace QuantConnect.Algorithm
         /// </summary>
         /// <param name="symbol">Asset symbol for this end of day event. Forex and equities have different closing hours.</param>
         [DocumentationAttribute(HandlingData)]
-        [StubsAvoidImplicits]
         public virtual void OnEndOfDay(Symbol symbol)
         {
             OnEndOfDay(symbol.ToString());
@@ -3358,13 +3354,15 @@ namespace QuantConnect.Algorithm
         public OptionChains OptionChains(IEnumerable<Symbol> symbols, bool flatten = false)
         {
             var canonicalSymbols = symbols.Select(GetCanonicalOptionSymbol).ToList();
-            var optionChainsData = GetChainsData<OptionUniverse>(canonicalSymbols);
+            var optionChainsData = History(canonicalSymbols, 1).GetUniverseData()
+                .Select(x => (x.Keys.Single(), x.Values.Single().Cast<OptionUniverse>()));
 
-            var chains = new OptionChains(Time.Date, flatten);
+            var time = Time.Date;
+            var chains = new OptionChains(time, flatten);
             foreach (var (symbol, contracts) in optionChainsData)
             {
                 var symbolProperties = SymbolPropertiesDatabase.GetSymbolProperties(symbol.ID.Market, symbol, symbol.SecurityType, AccountCurrency);
-                var optionChain = new OptionChain(symbol, GetTimeInExchangeTimeZone(symbol).Date, contracts, symbolProperties, flatten);
+                var optionChain = new OptionChain(symbol, time, contracts, symbolProperties, flatten);
                 chains.Add(symbol, optionChain);
             }
 
@@ -3442,15 +3440,17 @@ namespace QuantConnect.Algorithm
         public FuturesChains FuturesChains(IEnumerable<Symbol> symbols, bool flatten = false)
         {
             var canonicalSymbols = symbols.Select(GetCanonicalFutureSymbol).ToList();
-            var futureChainsData = GetChainsData<FutureUniverse>(canonicalSymbols);
+            var futureChainsData = History<FutureUniverse>(canonicalSymbols, 1)
+                .SelectMany(dict => dict.Select(kvp => (kvp.Key, kvp.Value.Cast<FutureUniverse>())));
 
-            var chains = new FuturesChains(Time.Date, flatten);
+            var time = Time.Date;
+            var chains = new FuturesChains(time, flatten);
 
             if (futureChainsData != null)
             {
                 foreach (var (symbol, contracts) in futureChainsData)
                 {
-                    var chain = new FuturesChain(symbol, GetTimeInExchangeTimeZone(symbol).Date, contracts, flatten);
+                    var chain = new FuturesChain(symbol, time, contracts.Cast<FutureUniverse>(), flatten);
                     chains.Add(symbol, chain);
                 }
             }
@@ -3701,40 +3701,6 @@ namespace QuantConnect.Algorithm
             {
                 _statisticsService = statisticsService;
             }
-        }
-
-        /// <summary>
-        /// Makes a history request to get the option/future chain data for the specified symbols
-        /// at the current algorithm time (<see cref="Time"/>)
-        /// </summary>
-        private IEnumerable<KeyValuePair<Symbol, IEnumerable<T>>> GetChainsData<T>(IEnumerable<Symbol> canonicalSymbols)
-            where T : BaseChainUniverseData
-        {
-            foreach (var symbol in canonicalSymbols)
-            {
-                // We will add a safety measure in case the universe file for the current time is not available:
-                // we will use the latest available universe file within the last 3 trading dates.
-                // This is useful in cases like live trading when the algorithm is deployed at a time of day when
-                // the universe file is not available yet.
-                var history = (DataDictionary<T>)null;
-                var periods = 1;
-                while ((history == null || history.Count == 0) && periods <= 3)
-                {
-                    history = History<T>([symbol], periods++).FirstOrDefault();
-                }
-
-                var chain = history != null && history.Count > 0 ? history.Values.Single().Cast<T>() : Enumerable.Empty<T>();
-                yield return KeyValuePair.Create(symbol, chain);
-            }
-        }
-
-        /// <summary>
-        /// Gets the current time in the exchange time zone for the given symbol
-        /// </summary>
-        private DateTime GetTimeInExchangeTimeZone(Symbol symbol)
-        {
-            var exchange = MarketHoursDatabase.GetExchangeHours(symbol.ID.Market, symbol, symbol.SecurityType);
-            return UtcTime.ConvertFromUtc(exchange.TimeZone);
         }
     }
 }

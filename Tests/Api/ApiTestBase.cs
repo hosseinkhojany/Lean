@@ -170,7 +170,7 @@ namespace QuantConnect.Tests.API
         /// <param name="projectId">Project id to scan</param>
         /// <param name="backtestId">Backtest id previously started</param>
         /// <returns>Completed backtest object</returns>
-        public static Backtest WaitForBacktestCompletion(Api.Api apiClient, int projectId, string backtestId, int secondsTimeout = 60, bool returnFailedBacktest = false)
+        public static Backtest WaitForBacktestCompletion(Api.Api apiClient, int projectId, string backtestId, int secondsTimeout = 60)
         {
             Backtest backtest;
             var finish = DateTime.UtcNow.AddSeconds(secondsTimeout);
@@ -178,24 +178,11 @@ namespace QuantConnect.Tests.API
             {
                 Thread.Sleep(1000);
                 backtest = apiClient.ReadBacktest(projectId, backtestId);
-                if (backtest == null)
+                if (backtest != null && (!string.IsNullOrEmpty(backtest.Error) || backtest.HasInitializeError))
                 {
-                    // api failed, let's retry
-                    continue;
+                    Assert.Fail($"Backtest {projectId}/{backtestId} failed: {backtest.Error}. Stacktrace: {backtest.Stacktrace}. Api errors: {string.Join(",", backtest.Errors)}");
                 }
-
-                if (!string.IsNullOrEmpty(backtest.Error) || backtest.HasInitializeError)
-                {
-                    if (!returnFailedBacktest)
-                    {
-                        Assert.Fail($"Backtest {projectId}/{backtestId} failed: {backtest.Error}. Stacktrace: {backtest.Stacktrace}. Api errors: {string.Join(",", backtest.Errors)}");
-                    }
-                    else
-                    {
-                        return backtest;
-                    }
-                }
-            } while (((backtest == null || (backtest.Success && backtest.Progress < 1)) && DateTime.UtcNow < finish));
+            } while (backtest.Success && backtest.Progress < 1 && DateTime.UtcNow < finish);
 
             return backtest;
         }

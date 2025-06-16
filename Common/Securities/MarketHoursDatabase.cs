@@ -247,11 +247,6 @@ namespace QuantConnect.Securities
                 return AlwaysOpen.TryGetEntry(market, symbol, securityType, out entry);
             }
 
-            return TryGetEntryImpl(market, symbol, securityType, out entry);
-        }
-
-        private bool TryGetEntryImpl(string market, string symbol, SecurityType securityType, out Entry entry)
-        {
             var symbolKey = new SecurityDatabaseKey(market, symbol, securityType);
             return Entries.TryGetValue(symbolKey, out entry)
                 // now check with null symbol key
@@ -313,7 +308,7 @@ namespace QuantConnect.Securities
             {
                 DateTimeZone dataTimeZone;
                 DateTimeZone exchangeTimeZone;
-                if (TryGetEntryImpl(market, symbol, securityType, out entry))
+                if (TryGetEntry(market, symbol, securityType, out entry))
                 {
                     dataTimeZone = entry.DataTimeZone;
                     exchangeTimeZone = entry.ExchangeHours.TimeZone;
