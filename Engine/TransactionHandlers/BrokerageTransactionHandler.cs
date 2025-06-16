@@ -19,6 +19,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using QuantConnect.Algorithm;
+using QuantConnect.Algorithm.Framework.Portfolio.SignalExports;
+using QuantConnect.AlgorithmFactory.Python.Wrappers;
 using QuantConnect.Brokerages;
 using QuantConnect.Brokerages.Backtesting;
 using QuantConnect.Interfaces;
@@ -38,6 +41,7 @@ namespace QuantConnect.Lean.Engine.TransactionHandlers
     public class BrokerageTransactionHandler : ITransactionHandler
     {
         private IAlgorithm _algorithm;
+        private SignalExportManager _signalExport;
         private IBrokerage _brokerage;
         private bool _brokerageIsBacktesting;
         private bool _loggedFeeAdjustmentWarning;
@@ -205,6 +209,12 @@ namespace QuantConnect.Lean.Engine.TransactionHandlers
             IsActive = true;
 
             _algorithm = algorithm;
+
+            _signalExport = _algorithm is QCAlgorithm
+                ? (_algorithm as QCAlgorithm).SignalExport
+                : (_algorithm as AlgorithmPythonWrapper).SignalExport;
+
+            NewOrderEvent += (s, e) => _signalExport.OnOrderEvent(e);
             InitializeTransactionThread();
         }
 
@@ -659,6 +669,8 @@ namespace QuantConnect.Lean.Engine.TransactionHandlers
                 return;
             }
 
+            _signalExport.Flush(CurrentTimeUtc);
+
             // check if the brokerage should perform cash sync now
             if (!_algorithm.IsWarmingUp && _brokerage.ShouldPerformCashSync(CurrentTimeUtc))
             {
@@ -868,6 +880,7 @@ namespace QuantConnect.Lean.Engine.TransactionHandlers
 
             // set the order status based on whether or not we successfully submitted the order to the market
             bool orderPlaced;
+            var error = string.Empty;
             try
             {
                 orderPlaced = orders.All(o => _brokerage.PlaceOrder(o));
@@ -876,12 +889,13 @@ namespace QuantConnect.Lean.Engine.TransactionHandlers
             {
                 Log.Error(err);
                 orderPlaced = false;
+                error = " " + err.Message;
             }
 
             if (!orderPlaced)
             {
                 // we failed to submit the order, invalidate it
-                var errorMessage = $"Brokerage failed to place orders: [{string.Join(",", orders.Select(o => o.Id))}]";
+                var errorMessage = $"Brokerage failed to place orders: [{string.Join(",", orders.Select(o => o.Id))}]{error}";
 
                 InvalidateOrders(orders, errorMessage);
                 _algorithm.Error(errorMessage);

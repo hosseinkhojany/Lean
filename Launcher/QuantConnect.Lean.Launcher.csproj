@@ -37,10 +37,6 @@
   </Target>
   <ItemGroup>
     <PackageReference Include="DynamicInterop" Version="0.9.1" />
-    <PackageReference Include="Plotly.NET" Version="5.1.0" />
-    <PackageReference Include="Plotly.NET.CSharp" Version="0.13.0" />
-    <PackageReference Include="Plotly.NET.ImageExport" Version="6.1.0" />
-    <PackageReference Include="Plotly.NET.Interactive" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Common\Properties\SharedAssemblyInfo.cs" Link="Properties\SharedAssemblyInfo.cs" />
@@ -58,8 +54,6 @@
     <ProjectReference Include="..\Indicators\QuantConnect.Indicators.csproj" />
     <ProjectReference Include="..\Common\QuantConnect.csproj" />
     <ProjectReference Include="..\Optimizer.Launcher\QuantConnect.Optimizer.Launcher.csproj" />
-    <ProjectReference Include="..\QuantConnect.DataSource.MetaTrader\QuantConnect.DataSource.MetaTrader.csproj" />
-    <ProjectReference Include="..\QuantConnect.MetaTraderBrokerage\QuantConnect.MetaTraderBrokerage.csproj" />
     <ProjectReference Include="..\Research\QuantConnect.Research.csproj" />
     <ProjectReference Include="..\Logging\QuantConnect.Logging.csproj" />
     <ProjectReference Include="..\Messaging\QuantConnect.Messaging.csproj" />
@@ -71,9 +65,7 @@
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="config.json">
+    <None Include="config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
