@@ -12,7 +12,6 @@ using QuantConnect.Indicators.CandlestickPatterns;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
 using QuantConnect.Indicators;
-using Microsoft.CodeAnalysis.Operations;
 using System;
 
 public class AAAEMA103 : QCAlgorithm, IRegressionAlgorithmDefinition

@@ -2,18 +2,10 @@
 
 using QuantConnect.Brokerages;
 using QuantConnect.Data;
-
-using QuantConnect.Brokerages;
-using QuantConnect.Data;
 using QuantConnect.Orders;
-using QuantConnect.Orders.Fees;
-using QuantConnect.Orders.Fills;
-using QuantConnect.Orders.Slippage;
 using QuantConnect.Securities;
 using System;
 using System.Collections.Generic;
-using NodaTime;
-using QuantConnect.Data.Consolidators;
 using QuantConnect.Data.Market;
 using QuantConnect.Util;
 

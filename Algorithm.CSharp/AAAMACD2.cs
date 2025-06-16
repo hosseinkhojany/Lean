@@ -6,11 +6,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Accord.IO;
-using Microsoft.FSharp.Core;
 using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
-using GenericChartExtensions = Plotly.NET.CSharp.GenericChartExtensions;
 
 namespace QuantConnect.Algorithm.CSharp
 {
