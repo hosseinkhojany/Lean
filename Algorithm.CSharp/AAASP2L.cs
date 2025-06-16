@@ -107,7 +107,7 @@ public class AAASP2L : QCAlgorithm, IRegressionAlgorithmDefinition
 
             decimal tp1 = isAllGreen ? Securities[symbol].Close + stoplossDistance : Securities[symbol].Close - stoplossDistance;
             decimal tp2 = isAllGreen ? Securities[symbol].Close + (stoplossDistance * 2) : Securities[symbol].Close - (stoplossDistance * 2);
-            decimal tp2 = isAllGreen ? Securities[symbol].Close + (stoplossDistance * 3) : Securities[symbol].Close - (stoplossDistance * 3);
+            decimal tp3 = isAllGreen ? Securities[symbol].Close + (stoplossDistance * 3) : Securities[symbol].Close - (stoplossDistance * 3);
             OrderTicket marketOrder = MarketOrder(symbol, isAllGreen ? 1 : -1, false, $"FVG Order at {barFVG.Time}");
 
         }
