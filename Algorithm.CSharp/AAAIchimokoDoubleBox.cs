@@ -43,7 +43,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void Initialize()
     {
-        SetStartDate(2025, 01, 01);
+        SetStartDate(2025, 04, 03);
         SetEndDate(2025, 04, 04);
         SetCash(10000);
 
@@ -124,14 +124,18 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                     orderDirection = OrderDirection.Sell;
 
                 }
-
-                if (crossedCandle != null && currentBar.Time - crossedCandle.Time < TimeSpan.FromMinutes(5 * puulbackValidRange))
+                //1. one of the candles which break the box should it body full outside of the box 
+                //3. set validation for just 12 candle if the candle more than 12 it should cancel the crossded entry
+                if (crossedCandle != null)
                 {
                     if (orderDirection == OrderDirection.Buy)
                     {
                         if (currentBar.Low <= crossedCandle.High)
                         {
                             MarketOrder(symbol, 1);
+                            StopMarketOrder(symbol, 1, stoploss);
+                            LimitOrder(symbol, 1, currentBar.Low + box);
+                            crossedCandle = null;
                         }
                     }
                     else
@@ -140,6 +144,9 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                         if (currentBar.High <= crossedCandle.Low)
                         {
                             MarketOrder(symbol, -1);
+                            StopMarketOrder(symbol, -1, stoploss);
+                            LimitOrder(symbol, -1, currentBar.Low + box);
+                            crossedCandle = null;
                         }
                     }
                 }

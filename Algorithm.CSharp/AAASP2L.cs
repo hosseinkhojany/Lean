@@ -37,8 +37,8 @@ public class AAASP2L : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void Initialize()
     {
-        SetStartDate(2025, 06, 12);
-        SetEndDate(2025, 06, 13);
+        SetStartDate(2025, 05, 01);
+        SetEndDate(2025, 06, 01);
         SetCash(10000);
 
         Symbols.Add(AddData<AAAMinute>(symbolName).Symbol);
@@ -108,7 +108,10 @@ public class AAASP2L : QCAlgorithm, IRegressionAlgorithmDefinition
             decimal tp1 = isAllGreen ? Securities[symbol].Close + stoplossDistance : Securities[symbol].Close - stoplossDistance;
             decimal tp2 = isAllGreen ? Securities[symbol].Close + (stoplossDistance * 2) : Securities[symbol].Close - (stoplossDistance * 2);
             decimal tp3 = isAllGreen ? Securities[symbol].Close + (stoplossDistance * 3) : Securities[symbol].Close - (stoplossDistance * 3);
-            OrderTicket marketOrder = MarketOrder(symbol, isAllGreen ? 1 : -1, false, $"FVG Order at {barFVG.Time}");
+
+            MarketOrder(symbol, isAllGreen ? 1 : -1);
+            StopMarketOrder(symbol, isAllGreen ? 1 : -1, stoplossDistance);
+            LimitOrder(symbol, isAllGreen ? 1 : -1, tp1);
 
         }
     }
@@ -121,6 +124,10 @@ public class AAASP2L : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void OnOrderEvent(OrderEvent orderEvent)
     {
+        if (orderEvent.Status == OrderStatus.Invalid && orderEvent.Message.Contains("Insufficient buying power"))
+        {
+            Quit("Critical Margin Issue - Force Quitting Algorithm.");
+        }
         Log($"Order: {orderEvent}");
     }
 
