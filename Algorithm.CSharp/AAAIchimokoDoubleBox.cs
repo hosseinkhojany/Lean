@@ -45,8 +45,8 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void Initialize()
     {
-        SetStartDate(2025, 01, 06);
-        SetEndDate(2025, 01, 07);
+        SetStartDate(2025, 06, 10);
+        SetEndDate(2025, 06, 12);
         SetCash(10000);
 
         Symbols.Add(AddData<AAAMinute5>(symbolName).Symbol);
@@ -54,8 +54,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
         SetWarmUp(100);
         Settings.DailyPreciseEndTime = false;
 
-        _ichimoku = new IchimokuKinkoHyo();
-        _ichimoku.Window.Size = 3;
+        _ichimoku = new IchimokuKinkoHyo(9, 26, 26, 52, 1, 1);
 
         for (int i = 0; i < Symbols.Count; i++)
         {
@@ -103,7 +102,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                         past24CrossedCandle = past24Candle;
                         Log("24 candle past: " + past24Candle.Time);
                         //RED TO GREEN (GREEN-BUY) BOX SET TO BOTTOM 
-                        Log(" Lead1 (GREEN) has crossed above Lead2. " + currentBar.Time);
+                        Log("\n\n\n Lead1 (GREEN) has crossed above Lead2. " + currentBar.Time + " \n\n\n");
                         orderDirection = OrderDirection.Buy;
                         pullbackCounter = 0;
                         breakoutCandle = null;
@@ -120,7 +119,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                         past24CrossedCandle = past24Candle;
                         Log("24 candle past: " + past24Candle.Time);
                         //GREEN TO RED (RED-SELL) BOX SET TO TOP
-                        Log(" Lead2 (RED) has crossed above Lead1. " + currentBar.Time);
+                        Log(" \n\n\nLead2 (RED) has crossed above Lead1. " + currentBar.Time+ "\n\n\n");
                         orderDirection = OrderDirection.Sell;
                         pullbackCounter = 0;
                         breakoutCandle = null;
