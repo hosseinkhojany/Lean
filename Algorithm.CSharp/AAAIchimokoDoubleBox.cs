@@ -23,7 +23,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
     List<string> Symbols = new();
 
     Dictionary<string, List<TradeBar>> series = new();
-    private RollingWindow<TradeBar> rollingWindows = new RollingWindow<TradeBar>(24);
+    private RollingWindow<TradeBar> rollingWindows = new RollingWindow<TradeBar>(100);
 
 
     decimal previousLead1 = 0;
@@ -33,6 +33,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
     decimal stoploss = 0;
 
     TradeBar crossedCandle;
+    TradeBar past24CrossedCandle;
     TradeBar breakoutCandle;
     bool breakout = false;
     bool falseBreakout = false;
@@ -44,7 +45,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void Initialize()
     {
-        SetStartDate(2025, 06,01);
+        SetStartDate(2025, 06, 10);
         SetEndDate(2025, 06, 15);
         SetCash(10000);
 
@@ -92,55 +93,68 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                 decimal baseLine = _ichimoku.Kijun;
                 decimal conversionLine = _ichimoku.Tenkan;
 
-                if (lead1 > lead2 && previousLead1 <= previousLead2)
+                if (lead1 > lead2 && previousLead1 <= previousLead2 && previousLead1 > 0 && previousLead2 > 0)
                 {
 
-                    if (rollingWindows.Count >= 24)
+                    if (rollingWindows.Count >= 99)
                     {
-                        TradeBar past24Candle = rollingWindows.Last<TradeBar>();
+                        TradeBar past24Candle = rollingWindows[1];
                         box = (past24Candle.High - past24Candle.Low);
                         stoploss = past24Candle.Low - box;
-                        crossedCandle = past24Candle;
+                        crossedCandle = currentBar;
+                        past24CrossedCandle = past24Candle;
                         Log("24 candle past: " + past24Candle.Time);
+                        //RED TO GREEN (GREEN-BUY) BOX SET TO BOTTOM 
+                        Log(" Lead1 (GREEN) has crossed above Lead2. " + currentBar.Time);
+                        orderDirection = OrderDirection.Buy;
+                        pullbackCounter = 0;
+                        breakoutCandle = null;
                     }
-
-                    //RED TO GREEN (GREEN-BUY) BOX SET TO BOTTOM 
-                    Log(" Lead1 (GREEN) has crossed above Lead2. " + currentBar.Time);
-                    orderDirection = OrderDirection.Buy;
 
                 }
 
-                if (lead2 > lead1 && previousLead2 <= previousLead1)
+                if (lead2 > lead1 && previousLead2 <= previousLead1 && previousLead1 > 0 && previousLead2 > 0)
                 {
-                    if (rollingWindows.Count >= 24)
+                    if (rollingWindows.Count >= 99)
                     {
-                        TradeBar past24Candle = rollingWindows.Last<TradeBar>();
+                        TradeBar past24Candle = rollingWindows[1];
                         box = (past24Candle.High - past24Candle.Low);
                         stoploss = box + past24Candle.High;
-                        crossedCandle = past24Candle;
+                        crossedCandle = currentBar;
+                        past24CrossedCandle = past24Candle;
                         Log("24 candle past: " + past24Candle.Time);
+                        //GREEN TO RED (RED-SELL) BOX SET TO TOP
+                        Log(" Lead2 (RED) has crossed above Lead1. " + currentBar.Time);
+                        orderDirection = OrderDirection.Sell;
+                        pullbackCounter = 0;
+                        breakoutCandle = null;
                     }
-                    //GREEN TO RED (RED-SELL) BOX SET TO TOP
-                    Log(" Lead2 (RED) has crossed above Lead1. " + currentBar.Time);
-                    orderDirection = OrderDirection.Sell;
 
                 }
                 //crossed
-                if (crossedCandle != null)
+                if (past24CrossedCandle != null)
                 {
                     
                     if (orderDirection == OrderDirection.Buy)
                     {
-                        //breakout
-                        if(currentBar.Close >= crossedCandle.High)
+                        //breakout for green
+                        if (currentBar.Open < currentBar.Close)
                         {
-                            if (breakoutCandle == null)
+                            if (currentBar.Open >= past24CrossedCandle.High)
+                            {
+                                breakoutCandle = currentBar;
+                            }
+                        }
+                        //breakout for sell
+                        else
+                        {
+                            if (currentBar.Close >= past24CrossedCandle.High)
                             {
                                 breakoutCandle = currentBar;
                             }
                         }
                         //pullback
-                        if (currentBar.Low <= crossedCandle.High)
+                        if (currentBar.Low >= past24CrossedCandle.High)
                         {
                             //check breakout and 12 candle achived or not 
                             if (breakoutCandle != null && pullbackCounter <= 12)
@@ -151,28 +165,37 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                                 Console.WriteLine(
                                     "\n\n{Open BUY " + "\n"
                                     + "Crossed: " + crossedCandle.Time + "\n"
-                                    + "BreakOut: " + breakoutCandle + "\n"
+                                    + "past24CrossedCandle: " + past24CrossedCandle.Time + "\n"
+                                    + "BreakOut: " + breakoutCandle.Time + "\n"
                                     + "PullBack:" + currentBar.Time + "\n"
                                     + "STOPLOSS: " + stoploss + "\n"
                                     + "BOXSize: " + box + "}\n\n"
                                     );
                                 crossedCandle = null;
+                                past24CrossedCandle = null;
                                 breakoutCandle = null;
-                                pullbackCounter = 0;
                             }
                         }
                     }
                     else
                     {
-                        //breakout
-                        if (currentBar.Open >= crossedCandle.Low)
+                        //breakout for green
+                        if (currentBar.Open < currentBar.Close)
                         {
-                            if (breakoutCandle == null)
+                            if (currentBar.Close <= past24CrossedCandle.Low)
                             {
                                 breakoutCandle = currentBar;
                             }
                         }
-                        if (currentBar.High <= crossedCandle.Low)
+                        //breakout for sell
+                        else
+                        {
+                            if (currentBar.Open <= past24CrossedCandle.Low)
+                            {
+                                breakoutCandle = currentBar;
+                            }
+                        }
+                        if (currentBar.High >= past24CrossedCandle.Low)
                         {
 
                             if (breakoutCandle != null && pullbackCounter <= 12)
@@ -183,14 +206,15 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                                 Console.WriteLine(
                                     "\n\n{Open SELL " + "\n"
                                     + "Crossed: " + crossedCandle.Time + "\n"
-                                    + "BreakOut: " + breakoutCandle + "\n"
+                                    + "past24CrossedCandle: " + past24CrossedCandle.Time + "\n"
+                                    + "BreakOut: " + breakoutCandle.Time + "\n"
                                     + "PullBack:" + currentBar.Time + "\n"
                                     + "STOPLOSS: " + stoploss + "\n"
                                     + "BOXSize: " + box + "}\n\n"
                                     );
                                 crossedCandle = null;
+                                past24CrossedCandle = null;
                                 breakoutCandle = null;
-                                pullbackCounter = 0;
                             }
                         }
                     }
