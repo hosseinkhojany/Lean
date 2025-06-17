@@ -23,7 +23,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
     List<string> Symbols = new();
 
     Dictionary<string, List<TradeBar>> series = new();
-    private RollingWindow<TradeBar> rollingWindows = new RollingWindow<TradeBar>(100);
+    private RollingWindow<TradeBar> rollingWindows = new RollingWindow<TradeBar>(24);
 
 
     decimal previousLead1 = 0;
@@ -33,23 +33,24 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
     decimal stoploss = 0;
 
     TradeBar crossedCandle;
+    TradeBar breakoutCandle;
     bool breakout = false;
     bool falseBreakout = false;
     bool pullback = false;
-    int puulbackValidRange = 12;
+    int pullbackCounter = 0;
 
     OrderDirection orderDirection;
 
 
     public override void Initialize()
     {
-        SetStartDate(2025, 04, 03);
-        SetEndDate(2025, 04, 04);
+        SetStartDate(2025, 06,01);
+        SetEndDate(2025, 06, 15);
         SetCash(10000);
 
         Symbols.Add(AddData<AAAMinute5>(symbolName).Symbol);
         symbol = AddCfd(symbolName).Symbol;
-        SetWarmUp(25);
+        SetWarmUp(100);
         Settings.DailyPreciseEndTime = false;
 
         _ichimoku = new IchimokuKinkoHyo();
@@ -104,7 +105,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                     }
 
                     //RED TO GREEN (GREEN-BUY) BOX SET TO BOTTOM 
-                    Log("Lead1 (GREEN) has crossed above Lead2." + currentBar.Time);
+                    Log(" Lead1 (GREEN) has crossed above Lead2. " + currentBar.Time);
                     orderDirection = OrderDirection.Buy;
 
                 }
@@ -120,43 +121,84 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                         Log("24 candle past: " + past24Candle.Time);
                     }
                     //GREEN TO RED (RED-SELL) BOX SET TO TOP
-                    Log("Lead2 (RED) has crossed above Lead1." + currentBar.Time);
+                    Log(" Lead2 (RED) has crossed above Lead1. " + currentBar.Time);
                     orderDirection = OrderDirection.Sell;
 
                 }
-                //1. one of the candles which break the box should it body full outside of the box 
-                //3. set validation for just 12 candle if the candle more than 12 it should cancel the crossded entry
+                //crossed
                 if (crossedCandle != null)
                 {
+                    
                     if (orderDirection == OrderDirection.Buy)
                     {
+                        //breakout
+                        if(currentBar.Close >= crossedCandle.High)
+                        {
+                            if (breakoutCandle == null)
+                            {
+                                breakoutCandle = currentBar;
+                            }
+                        }
+                        //pullback
                         if (currentBar.Low <= crossedCandle.High)
                         {
-                            MarketOrder(symbol, 1);
-                            StopMarketOrder(symbol, 1, stoploss);
-                            LimitOrder(symbol, 1, currentBar.Low + box);
-                            crossedCandle = null;
+                            //check breakout and 12 candle achived or not 
+                            if (breakoutCandle != null && pullbackCounter <= 12)
+                            {
+                                MarketOrder(symbol, 1);
+                                StopMarketOrder(symbol, 1, stoploss);
+                                LimitOrder(symbol, 1, currentBar.Low + box);
+                                Console.WriteLine(
+                                    "\n\n{Open BUY " + "\n"
+                                    + "Crossed: " + crossedCandle.Time + "\n"
+                                    + "BreakOut: " + breakoutCandle + "\n"
+                                    + "PullBack:" + currentBar.Time + "\n"
+                                    + "STOPLOSS: " + stoploss + "\n"
+                                    + "BOXSize: " + box + "}\n\n"
+                                    );
+                                crossedCandle = null;
+                                breakoutCandle = null;
+                                pullbackCounter = 0;
+                            }
                         }
                     }
                     else
                     {
-
+                        //breakout
+                        if (currentBar.Open >= crossedCandle.Low)
+                        {
+                            if (breakoutCandle == null)
+                            {
+                                breakoutCandle = currentBar;
+                            }
+                        }
                         if (currentBar.High <= crossedCandle.Low)
                         {
-                            MarketOrder(symbol, -1);
-                            StopMarketOrder(symbol, -1, stoploss);
-                            LimitOrder(symbol, -1, currentBar.Low + box);
-                            crossedCandle = null;
+
+                            if (breakoutCandle != null && pullbackCounter <= 12)
+                            {
+                                MarketOrder(symbol, -1);
+                                StopMarketOrder(symbol, -1, stoploss);
+                                LimitOrder(symbol, -1, currentBar.Low + box);
+                                Console.WriteLine(
+                                    "\n\n{Open SELL " + "\n"
+                                    + "Crossed: " + crossedCandle.Time + "\n"
+                                    + "BreakOut: " + breakoutCandle + "\n"
+                                    + "PullBack:" + currentBar.Time + "\n"
+                                    + "STOPLOSS: " + stoploss + "\n"
+                                    + "BOXSize: " + box + "}\n\n"
+                                    );
+                                crossedCandle = null;
+                                breakoutCandle = null;
+                                pullbackCounter = 0;
+                            }
                         }
                     }
-                }
-                else
-                {
-
                 }
 
                 previousLead1 = lead1;
                 previousLead2 = lead2;
+                pullbackCounter += 1;
             }
         }
     }
