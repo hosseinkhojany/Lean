@@ -45,8 +45,8 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void Initialize()
     {
-        SetStartDate(2025, 06, 10);
-        SetEndDate(2025, 06, 15);
+        SetStartDate(2025, 01, 06);
+        SetEndDate(2025, 01, 07);
         SetCash(10000);
 
         Symbols.Add(AddData<AAAMinute5>(symbolName).Symbol);
@@ -86,7 +86,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
             if (_ichimoku.IsReady)
             {
-                // Console.WriteLine($"Time: {currentBar.Time}, Lead 1: {_ichimoku.SenkouA}, Lead 2: {_ichimoku.SenkouB}, Tenkan: {_ichimoku.Tenkan}, Kijun: {_ichimoku.Kijun}, Chikou: {_ichimoku.Chikou}, TenkanMax: {_ichimoku.TenkanMaximum}, TenkanMin: {_ichimoku.TenkanMinimum}, KijunMax: {_ichimoku.KijunMaximum}, KijunMin: {_ichimoku.KijunMinimum}, SenkouBMax: {_ichimoku.SenkouBMaximum}, SenkouBMin: {_ichimoku.SenkouBMinimum}, DelayedTenkanSenkouA: {_ichimoku.DelayedTenkanSenkouA}, DelayedKijunSenkouA: {_ichimoku.DelayedKijunSenkouA}, DelayedMaxSenkouB: {_ichimoku.DelayedMaximumSenkouB}, DelayedMinSenkouB: {_ichimoku.DelayedMinimumSenkouB}");
+                Console.WriteLine($"Time: {currentBar.Time}, Lead 1: {_ichimoku.SenkouA}, Lead 2: {_ichimoku.SenkouB}, Tenkan: {_ichimoku.Tenkan}, Kijun: {_ichimoku.Kijun}, Chikou: {_ichimoku.Chikou}, TenkanMax: {_ichimoku.TenkanMaximum}, TenkanMin: {_ichimoku.TenkanMinimum}, KijunMax: {_ichimoku.KijunMaximum}, KijunMin: {_ichimoku.KijunMinimum}, SenkouBMax: {_ichimoku.SenkouBMaximum}, SenkouBMin: {_ichimoku.SenkouBMinimum}, DelayedTenkanSenkouA: {_ichimoku.DelayedTenkanSenkouA}, DelayedKijunSenkouA: {_ichimoku.DelayedKijunSenkouA}, DelayedMaxSenkouB: {_ichimoku.DelayedMaximumSenkouB}, DelayedMinSenkouB: {_ichimoku.DelayedMinimumSenkouB}");
                 decimal lead1 = _ichimoku.SenkouA;
                 decimal lead2 = _ichimoku.SenkouB;
                 decimal laggingSpanB = _ichimoku.Chikou;
@@ -152,13 +152,14 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                         //pullback
                         if (currentBar.Low >= past24CrossedCandle.High)
                         {
-                            //3353.39 - 3348.81 + 3353.39 sell
-                            //3353.39 - 3348.81 - 3348.81 buy
+
+                            //3353.39 - 3348.81 - 3348.81 sell
+                            //3353.39 - 3348.81 + 3353.39 buy
                             //check breakout and 12 candle achived or not 
                             if (breakoutCandle != null && pullbackCounter <= 12)
                             {
                                 box = past24CrossedCandle.High - past24CrossedCandle.Low;
-                                stoploss = box - past24CrossedCandle.Low;
+                                stoploss = box + past24CrossedCandle.High;
                                 MarketOrder(symbol, 1);
                                 StopMarketOrder(symbol, 1, stoploss);
                                 LimitOrder(symbol, 1, currentBar.Low + box);
@@ -201,7 +202,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                             if (breakoutCandle != null && pullbackCounter <= 12)
                             {
                                 box = past24CrossedCandle.High - past24CrossedCandle.Low;
-                                stoploss = box - past24CrossedCandle.High;
+                                stoploss = box - past24CrossedCandle.Low;
                                 MarketOrder(symbol, -1);
                                 StopMarketOrder(symbol, -1, stoploss);
                                 LimitOrder(symbol, -1, currentBar.Low + box);
@@ -283,7 +284,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
         { "Loss Rate", "0%" },
         { "Win Rate", "0%" },
         { "Profit-Loss Ratio", "0" },
-        { "Alpha", "0.166" },
+        { "Alpha", "0.166" },   
         { "Beta", "0.717" },
         { "Annual Standard Deviation", "0.136" },
         { "Annual Variance", "0.019" },
