@@ -86,7 +86,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
             if (_ichimoku.IsReady)
             {
-                //Console.WriteLine($"Time: {currentBar.Time}, Lead 1: {_ichimoku.SenkouA}, Lead 2: {_ichimoku.SenkouB}, Tenkan: {_ichimoku.Tenkan}, Kijun: {_ichimoku.Kijun}, Chikou: {_ichimoku.Chikou}, TenkanMax: {_ichimoku.TenkanMaximum}, TenkanMin: {_ichimoku.TenkanMinimum}, KijunMax: {_ichimoku.KijunMaximum}, KijunMin: {_ichimoku.KijunMinimum}, SenkouBMax: {_ichimoku.SenkouBMaximum}, SenkouBMin: {_ichimoku.SenkouBMinimum}, DelayedTenkanSenkouA: {_ichimoku.DelayedTenkanSenkouA}, DelayedKijunSenkouA: {_ichimoku.DelayedKijunSenkouA}, DelayedMaxSenkouB: {_ichimoku.DelayedMaximumSenkouB}, DelayedMinSenkouB: {_ichimoku.DelayedMinimumSenkouB}");
+                // Console.WriteLine($"Time: {currentBar.Time}, Lead 1: {_ichimoku.SenkouA}, Lead 2: {_ichimoku.SenkouB}, Tenkan: {_ichimoku.Tenkan}, Kijun: {_ichimoku.Kijun}, Chikou: {_ichimoku.Chikou}, TenkanMax: {_ichimoku.TenkanMaximum}, TenkanMin: {_ichimoku.TenkanMinimum}, KijunMax: {_ichimoku.KijunMaximum}, KijunMin: {_ichimoku.KijunMinimum}, SenkouBMax: {_ichimoku.SenkouBMaximum}, SenkouBMin: {_ichimoku.SenkouBMinimum}, DelayedTenkanSenkouA: {_ichimoku.DelayedTenkanSenkouA}, DelayedKijunSenkouA: {_ichimoku.DelayedKijunSenkouA}, DelayedMaxSenkouB: {_ichimoku.DelayedMaximumSenkouB}, DelayedMinSenkouB: {_ichimoku.DelayedMinimumSenkouB}");
                 decimal lead1 = _ichimoku.SenkouA;
                 decimal lead2 = _ichimoku.SenkouB;
                 decimal laggingSpanB = _ichimoku.Chikou;
