@@ -99,8 +99,6 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                     if (rollingWindows.Count >= 99)
                     {
                         TradeBar past24Candle = rollingWindows[1];
-                        box = (past24Candle.High - past24Candle.Low);
-                        stoploss = past24Candle.Low - box;
                         crossedCandle = currentBar;
                         past24CrossedCandle = past24Candle;
                         Log("24 candle past: " + past24Candle.Time);
@@ -118,8 +116,6 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                     if (rollingWindows.Count >= 99)
                     {
                         TradeBar past24Candle = rollingWindows[1];
-                        box = (past24Candle.High - past24Candle.Low);
-                        stoploss = box + past24Candle.High;
                         crossedCandle = currentBar;
                         past24CrossedCandle = past24Candle;
                         Log("24 candle past: " + past24Candle.Time);
@@ -156,9 +152,13 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                         //pullback
                         if (currentBar.Low >= past24CrossedCandle.High)
                         {
+                            //3353.39 - 3348.81 + 3353.39 sell
+                            //3353.39 - 3348.81 - 3348.81 buy
                             //check breakout and 12 candle achived or not 
                             if (breakoutCandle != null && pullbackCounter <= 12)
                             {
+                                box = past24CrossedCandle.High - past24CrossedCandle.Low;
+                                stoploss = box - past24CrossedCandle.Low;
                                 MarketOrder(symbol, 1);
                                 StopMarketOrder(symbol, 1, stoploss);
                                 LimitOrder(symbol, 1, currentBar.Low + box);
@@ -200,6 +200,8 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
                             if (breakoutCandle != null && pullbackCounter <= 12)
                             {
+                                box = past24CrossedCandle.High - past24CrossedCandle.Low;
+                                stoploss = box - past24CrossedCandle.High;
                                 MarketOrder(symbol, -1);
                                 StopMarketOrder(symbol, -1, stoploss);
                                 LimitOrder(symbol, -1, currentBar.Low + box);
