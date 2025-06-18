@@ -1,3 +1,7 @@
+using MT.Models;
+using MT.SharedOC;
+using MtApi5;
+
 namespace QuantConnect.Algorithm.CSharp;
 
 using System.Collections.Generic;
@@ -13,6 +17,7 @@ using QuantConnect.Interfaces;
 using QuantConnect.Orders;
 using QuantConnect.Indicators;
 using System;
+using MT;
 
 public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 {
@@ -31,6 +36,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
     decimal box = 0;
     decimal stoploss = 0;
+    decimal takeProfit = 0;
 
     TradeBar crossedCandle;
     TradeBar past24CrossedCandle;
@@ -42,11 +48,13 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
     OrderDirection orderDirection;
 
+    MT4 client = new MT4(true, 8222);
+
 
     public override void Initialize()
     {
-        SetStartDate(2025, 06, 10);
-        SetEndDate(2025, 06, 12);
+        SetStartDate(2024, 06, 05);
+        SetEndDate(2025, 06, 10);
         SetCash(10000);
 
         Symbols.Add(AddData<AAAMinute5>(symbolName).Symbol);
@@ -158,10 +166,24 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                             if (breakoutCandle != null && pullbackCounter <= 12)
                             {
                                 box = past24CrossedCandle.High - past24CrossedCandle.Low;
-                                stoploss = box + past24CrossedCandle.High;
-                                MarketOrder(symbol, 1);
-                                StopMarketOrder(symbol, 1, stoploss);
-                                LimitOrder(symbol, 1, currentBar.Low + box);
+                                takeProfit = Math.Abs(box + past24CrossedCandle.High);
+                                stoploss = Math.Abs(box - past24CrossedCandle.Low);
+                                // MarketOrder(symbol, 1);
+                                // StopMarketOrder(symbol, 1, stoploss);
+                                // LimitOrder(symbol, 1, takeProfit);
+                                client.SendOrderAsync(
+                                    new SendOrderRq(
+                                        OrderTypeRequest.CREATE,
+                                        new MqlTradeRequest
+                                        {
+                                            Symbol = SymbolMapper.leanSymbolToMt(symbolName, MtMarketType.ORBEX, MTType.MT4),
+                                            Volume = 0.01,
+                                            Price = (double)Securities[symbol].Price,
+                                            Sl = (double)stoploss,
+                                            Tp = (double)takeProfit,
+                                        }
+                                    )
+                                );
                                 Console.WriteLine(
                                     "\n\n{Open BUY " + "\n"
                                     + "Crossed: " + crossedCandle.Time + "\n"
@@ -169,6 +191,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                                     + "BreakOut: " + breakoutCandle.Time + "\n"
                                     + "PullBack:" + currentBar.Time + "\n"
                                     + "STOPLOSS: " + stoploss + "\n"
+                                    + "TAKEPROFIT: " + takeProfit + "\n"
                                     + "BOXSize: " + box + "}\n\n"
                                     );
                                 crossedCandle = null;
@@ -201,10 +224,24 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                             if (breakoutCandle != null && pullbackCounter <= 12)
                             {
                                 box = past24CrossedCandle.High - past24CrossedCandle.Low;
-                                stoploss = box - past24CrossedCandle.Low;
-                                MarketOrder(symbol, -1);
-                                StopMarketOrder(symbol, -1, stoploss);
-                                LimitOrder(symbol, -1, currentBar.Low + box);
+                                takeProfit = Math.Abs(box - past24CrossedCandle.Low);
+                                stoploss = Math.Abs(box + past24CrossedCandle.High);
+                                // MarketOrder(symbol, -1);
+                                // StopMarketOrder(symbol, -1, stoploss);
+                                // LimitOrder(symbol, -1, takeProfit);
+                                client.SendOrderAsync(
+                                    new SendOrderRq(
+                                        OrderTypeRequest.CREATE,
+                                        new MqlTradeRequest
+                                        {
+                                            Symbol = SymbolMapper.leanSymbolToMt(symbolName, MtMarketType.ORBEX, MTType.MT4),
+                                            Volume = 0.01,
+                                            Price = (double)Securities[symbol].Price,
+                                            Sl = (double)stoploss,
+                                            Tp = (double)takeProfit,
+                                        }
+                                    )
+                                );
                                 Console.WriteLine(
                                     "\n\n{Open SELL " + "\n"
                                     + "Crossed: " + crossedCandle.Time + "\n"
@@ -212,6 +249,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                                     + "BreakOut: " + breakoutCandle.Time + "\n"
                                     + "PullBack:" + currentBar.Time + "\n"
                                     + "STOPLOSS: " + stoploss + "\n"
+                                    + "TAKEPROFIT: " + takeProfit + "\n"
                                     + "BOXSize: " + box + "}\n\n"
                                     );
                                 crossedCandle = null;

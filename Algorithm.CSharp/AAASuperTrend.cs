@@ -5,6 +5,7 @@ using QuantConnect.Data;
 using QuantConnect.Data.Market;
 using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Indicators;
+using QuantConnect.Indicators.CandlestickPatterns;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
 using QuantConnect.Securities;
@@ -14,28 +15,51 @@ namespace QuantConnect.Algorithm.CSharp;
 public class AAASuperTrend : QCAlgorithm, IRegressionAlgorithmDefinition
 {
     List<string> Symbols = new();
-    private string symbolName = "EURUSD";
+    private string symbolName = "XAUUSD";
     private Symbol symbol;
-    Chart qcChart;
+    Dictionary<string, List<TradeBar>> series = new();
+    TrendAlertIndicator trendAlertIndicator;
+    private SimpleMovingAverage simpleMovingAverage;
+    private PivotPointsHighLow pivotHighLow;
+    private Engulfing engulfing;
+    HeikinAshi ltHA;
+    HeikinAshi mtHA;
+    ExponentialMovingAverage mtEMA20;
     SuperTrend superTrend;
+    int currentTrend = 4;
+
+    private int previousTrend = 0;
     public override void Initialize()
     {
-        SetStartDate(2020, 1, 1);
+        SetStartDate(2025, 1, 1);
         SetEndDate(2025, 4, 4);
         SetCash(100000);
 
         Symbols.Add(AddData<AAADaily>(symbolName).Symbol);
-        symbol = AddForex(symbolName).Symbol;
+        //Symbols.Add(AddData<AAAHour2>(symbolName).Symbol);
+        //Symbols.Add(AddData<AAAMinute15>(symbolName).Symbol);
+        Symbols.Add(AddData<AAAMinute5>(symbolName).Symbol);
+        symbol = AddCfd(symbolName).Symbol;
         SetWarmUp(5);
-            
-        qcChart = new Chart(symbolName);
-        AddChart(qcChart);
+
+        for (int i = 0; i < Symbols.Count; i++)
+        {
+            series[Symbols[i]] = new List<TradeBar>();
+        }
+
         Settings.DailyPreciseEndTime = false;
-        
+
         superTrend = new SuperTrend(25, 3.0m);
+        ltHA = new HeikinAshi("LT_HA");
+        mtHA = new HeikinAshi("MT_HA");
+        mtEMA20 = new ExponentialMovingAverage("MT_EMA20", 20);
+        trendAlertIndicator = new TrendAlertIndicator(symbolName, ltHA, mtHA, mtEMA20);
+        simpleMovingAverage = new SimpleMovingAverage(symbolName, 103);
+        pivotHighLow = new PivotPointsHighLow(100, 100);
+        engulfing = new Engulfing(symbolName);
     }
-    
-    
+
+
     /*
     
     Trade Entries
@@ -47,7 +71,7 @@ public class AAASuperTrend : QCAlgorithm, IRegressionAlgorithmDefinition
 
     Long Only
 
-     */    
+     */
     /*
     
     Trade Exits
@@ -59,70 +83,102 @@ public class AAASuperTrend : QCAlgorithm, IRegressionAlgorithmDefinition
 
 
 
-public override void OnData(Slice data)
-{
-    if (data.First().Value is AAADaily daily)
+    public override void OnData(Slice slice)
     {
-        TradeBar currentBar = daily.ToTradeBarWithoutSymbol();
-        Plot(symbolName, Symbols[0], currentBar);
-        Securities[symbol].Update(new List<BaseData> { daily.ToTradeBar() }, currentBar.GetType());
-        
-        superTrend.Update(currentBar);
-        
-        if (IsWarmingUp) return;
-
-        if (superTrend.IsReady)
+        if (slice.First().Value is AAAMinute5 m5)
         {
-            Console.WriteLine("superTrend.Current.Value:"+superTrend.Current.Value);
-            Console.WriteLine("CurrentTrailingUpperBand:"+superTrend.CurrentTrailingUpperBand);
-            Console.WriteLine("CurrentTrailingLowerBand:"+superTrend.CurrentTrailingLowerBand);
-            Console.WriteLine("BasicUpperBand:"+superTrend.BasicUpperBand);
-            Console.WriteLine("BasicLowerBand:"+superTrend.BasicLowerBand);
+            TradeBar currentBar = m5.ToTradeBarWithoutSymbol();
+            series[Symbols[1]].Add(currentBar);
+            Securities[symbol].Update(new List<BaseData> { m5.ToTradeBar() }, currentBar.GetType());
+
+            superTrend.Update(currentBar);
+
+            if (IsWarmingUp) return;
+
+            if (superTrend.IsReady)
+            {
+                CheckTrendChange(superTrend, currentBar);
+                //Console.WriteLine("superTrend.Current.Value:" + superTrend.Current.Value);
+                //Console.WriteLine("CurrentTrailingUpperBand:" + superTrend.CurrentTrailingUpperBand);
+                //Console.WriteLine("CurrentTrailingLowerBand:" + superTrend.CurrentTrailingLowerBand);
+                //Console.WriteLine("BasicUpperBand:" + superTrend.BasicUpperBand);
+                //Console.WriteLine("BasicLowerBand:" + superTrend.BasicLowerBand);
+            }
+
+
+
+
         }
+        else if (slice.First().Value is AAADaily d) { 
+
+        }
+    }
 
 
+    public override void OnSecuritiesChanged(SecurityChanges changes)
+    {
 
     }
-}
-    
 
-        public override void OnSecuritiesChanged(SecurityChanges changes)
+    public override void OnOrderEvent(OrderEvent orderEvent)
+    {
+        Log($"Order: {orderEvent}");
+    }
+
+    public override void OnEndOfAlgorithm()
+    {
+        AAAChartLauncher.Launch(series, Symbols, Statistics, false);
+    }
+
+    public int GetCurrentTrend(SuperTrend superTrend)
+    {
+        if (superTrend.Current.Value > superTrend.CurrentTrailingUpperBand)
         {
-
+            return 1;
         }
-
-        public override void OnOrderEvent(OrderEvent orderEvent)
+        else if (superTrend.Current.Value < superTrend.CurrentTrailingLowerBand)
         {
-            Log($"Order: {orderEvent}");
+            return -1; 
         }
-
-        public override void OnEndOfAlgorithm()
+        else
         {
-            AAAChartLauncher.Launch(qcChart.Series, Symbols,Statistics,false);
+            return 0;
         }
+    }
 
-        public bool CanRunLocally { get; } = true;
-        public List<Language> Languages { get; } = [Language.CSharp];
+    private void CheckTrendChange(SuperTrend superTrend, TradeBar currentBar)
+    {
+        int currentTrend = GetCurrentTrend(superTrend);
 
-        /// <summary>
-        /// Data Points count of all timeslices of algorithm
-        /// </summary>
-        public virtual long DataPoints => 0;
+        if (currentTrend != previousTrend)
+        {
+            Log($"Trend changed for {symbol} at {currentBar.Time}: Previous Trend = {previousTrend}, Current Trend = {currentTrend}");
+            previousTrend = currentTrend;
+        }
+    }
 
-        /// <summary>
-        /// Data Points count of the algorithm history
-        /// </summary>
-        public virtual int AlgorithmHistoryDataPoints => 0;
+    public bool CanRunLocally { get; } = true;
+    public List<Language> Languages { get; } = [Language.CSharp];
 
-        /// <summary>
-        /// Final status of the algorithm
-        /// </summary>
-        public AlgorithmStatus AlgorithmStatus => AlgorithmStatus.Completed;
+    /// <summary>
+    /// Data Points count of all timeslices of algorithm
+    /// </summary>
+    public virtual long DataPoints => 0;
 
-        /// <summary>
-        /// This is used by the regression test system to indicate what the expected statistics are from running the algorithm
-        /// </summary>
-        public Dictionary<string, string> ExpectedStatistics => new Dictionary<string, string>
+    /// <summary>
+    /// Data Points count of the algorithm history
+    /// </summary>
+    public virtual int AlgorithmHistoryDataPoints => 0;
+
+    /// <summary>
+    /// Final status of the algorithm
+    /// </summary>
+    public AlgorithmStatus AlgorithmStatus => AlgorithmStatus.Completed;
+
+    /// <summary>
+    /// This is used by the regression test system to indicate what the expected statistics are from running the algorithm
+    /// </summary>
+    public Dictionary<string, string> ExpectedStatistics => new Dictionary<string, string>
         {
             {"Total Orders", "1"},
             {"Average Win", "0%"},

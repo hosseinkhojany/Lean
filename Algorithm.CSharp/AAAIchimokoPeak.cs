@@ -11,29 +11,50 @@ using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Indicators.CandlestickPatterns;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
+using QuantConnect.Indicators;
+using System;
 
 public class AAAIchimokoPeak : QCAlgorithm, IRegressionAlgorithmDefinition
 {
     private string symbolName = "XAUUSD";
     private Symbol symbol;
-    private DojiStar testIndicator;
+
+    private IchimokuKinkoHyo _ichimoku;
     List<string> Symbols = new();
 
     Dictionary<string, List<TradeBar>> series = new();
+    private RollingWindow<TradeBar> rollingWindows = new RollingWindow<TradeBar>(100);
 
+
+    decimal previousLead1 = 0;
+    decimal previousLead2 = 0;
+
+    decimal box = 0;
+    decimal stoploss = 0;
+
+    TradeBar crossedCandle;
+    TradeBar past24CrossedCandle;
+    TradeBar breakoutCandle;
+    bool breakout = false;
+    bool falseBreakout = false;
+    bool pullback = false;
+    int pullbackCounter = 0;
+
+    OrderDirection orderDirection;
 
 
     public override void Initialize()
     {
-        SetStartDate(2025, 01, 01);
-        SetEndDate(2025, 04, 04);
+        SetStartDate(2025, 06, 10);
+        SetEndDate(2025, 06, 12);
         SetCash(10000);
 
-        Symbols.Add(AddData<AAAHour4>(symbolName).Symbol);
+        Symbols.Add(AddData<AAAMinute5>(symbolName).Symbol);
         symbol = AddCfd(symbolName).Symbol;
-        SetWarmUp(15);
+        SetWarmUp(100);
         Settings.DailyPreciseEndTime = false;
-        testIndicator = new DojiStar(symbolName);
+
+        _ichimoku = new IchimokuKinkoHyo(9, 26, 26, 52, 1, 1);
 
         for (int i = 0; i < Symbols.Count; i++)
         {
@@ -50,17 +71,160 @@ public class AAAIchimokoPeak : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void OnData(Slice slice)
     {
-        if (slice.First().Value is AAAHour4 daily)
+        if (slice.First().Value is AAAMinute5 daily)
         {
             TradeBar currentBar = daily.ToTradeBarWithoutSymbol();
+
             series[Symbols[0]].Add(currentBar);
+            rollingWindows.Add(currentBar);
             Securities[symbol].Update(new List<BaseData> { daily.ToTradeBar() }, currentBar.GetType());
-            testIndicator.Update(currentBar);
+
+            _ichimoku.Update(currentBar);
+
             if (IsWarmingUp) return;
 
-            if (testIndicator.IsReady)
+            if (_ichimoku.IsReady)
             {
+                Console.WriteLine($"Time: {currentBar.Time}, Lead 1: {_ichimoku.SenkouA}, Lead 2: {_ichimoku.SenkouB}, Tenkan: {_ichimoku.Tenkan}, Kijun: {_ichimoku.Kijun}, Chikou: {_ichimoku.Chikou}, TenkanMax: {_ichimoku.TenkanMaximum}, TenkanMin: {_ichimoku.TenkanMinimum}, KijunMax: {_ichimoku.KijunMaximum}, KijunMin: {_ichimoku.KijunMinimum}, SenkouBMax: {_ichimoku.SenkouBMaximum}, SenkouBMin: {_ichimoku.SenkouBMinimum}, DelayedTenkanSenkouA: {_ichimoku.DelayedTenkanSenkouA}, DelayedKijunSenkouA: {_ichimoku.DelayedKijunSenkouA}, DelayedMaxSenkouB: {_ichimoku.DelayedMaximumSenkouB}, DelayedMinSenkouB: {_ichimoku.DelayedMinimumSenkouB}");
+                decimal lead1 = _ichimoku.SenkouA;
+                decimal lead2 = _ichimoku.SenkouB;
+                decimal laggingSpanB = _ichimoku.Chikou;
+                decimal baseLine = _ichimoku.Kijun;
+                decimal conversionLine = _ichimoku.Tenkan;
 
+                if (lead1 > lead2 && previousLead1 <= previousLead2 && previousLead1 > 0 && previousLead2 > 0)
+                {
+
+                    if (rollingWindows.Count >= 99)
+                    {
+                        TradeBar past24Candle = rollingWindows[1];
+                        crossedCandle = currentBar;
+                        past24CrossedCandle = past24Candle;
+                        Log("24 candle past: " + past24Candle.Time);
+                        //RED TO GREEN (GREEN-BUY) BOX SET TO BOTTOM 
+                        Log("\n\n\n Lead1 (GREEN) has crossed above Lead2. " + currentBar.Time + " \n\n\n");
+                        orderDirection = OrderDirection.Buy;
+                        pullbackCounter = 0;
+                        breakoutCandle = null;
+                    }
+
+                }
+
+                if (lead2 > lead1 && previousLead2 <= previousLead1 && previousLead1 > 0 && previousLead2 > 0)
+                {
+                    if (rollingWindows.Count >= 99)
+                    {
+                        TradeBar past24Candle = rollingWindows[1];
+                        crossedCandle = currentBar;
+                        past24CrossedCandle = past24Candle;
+                        Log("24 candle past: " + past24Candle.Time);
+                        //GREEN TO RED (RED-SELL) BOX SET TO TOP
+                        Log(" \n\n\nLead2 (RED) has crossed above Lead1. " + currentBar.Time + "\n\n\n");
+                        orderDirection = OrderDirection.Sell;
+                        pullbackCounter = 0;
+                        breakoutCandle = null;
+                    }
+
+                }
+                //crossed
+                if (past24CrossedCandle != null)
+                {
+
+                    if (orderDirection == OrderDirection.Buy)
+                    {
+                        //breakout for green
+                        if (currentBar.Open < currentBar.Close)
+                        {
+                            if (currentBar.Open >= past24CrossedCandle.High)
+                            {
+                                breakoutCandle = currentBar;
+                            }
+                        }
+                        //breakout for sell
+                        else
+                        {
+                            if (currentBar.Close >= past24CrossedCandle.High)
+                            {
+                                breakoutCandle = currentBar;
+                            }
+                        }
+                        //pullback
+                        if (currentBar.Low >= past24CrossedCandle.High)
+                        {
+
+                            //3353.39 - 3348.81 - 3348.81 sell
+                            //3353.39 - 3348.81 + 3353.39 buy
+                            //check breakout and 12 candle achived or not 
+                            if (breakoutCandle != null && pullbackCounter <= 12)
+                            {
+                                box = past24CrossedCandle.High - past24CrossedCandle.Low;
+                                stoploss = box + past24CrossedCandle.High;
+                                MarketOrder(symbol, 1);
+                                StopMarketOrder(symbol, 1, stoploss);
+                                LimitOrder(symbol, 1, currentBar.Low + box);
+                                Console.WriteLine(
+                                    "\n\n{Open BUY " + "\n"
+                                    + "Crossed: " + crossedCandle.Time + "\n"
+                                    + "past24CrossedCandle: " + past24CrossedCandle.Time + "\n"
+                                    + "BreakOut: " + breakoutCandle.Time + "\n"
+                                    + "PullBack:" + currentBar.Time + "\n"
+                                    + "STOPLOSS: " + stoploss + "\n"
+                                    + "BOXSize: " + box + "}\n\n"
+                                    );
+                                crossedCandle = null;
+                                past24CrossedCandle = null;
+                                breakoutCandle = null;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        //breakout for green
+                        if (currentBar.Open < currentBar.Close)
+                        {
+                            if (currentBar.Close <= past24CrossedCandle.Low)
+                            {
+                                breakoutCandle = currentBar;
+                            }
+                        }
+                        //breakout for sell
+                        else
+                        {
+                            if (currentBar.Open <= past24CrossedCandle.Low)
+                            {
+                                breakoutCandle = currentBar;
+                            }
+                        }
+                        if (currentBar.High >= past24CrossedCandle.Low)
+                        {
+
+                            if (breakoutCandle != null && pullbackCounter <= 12)
+                            {
+                                box = past24CrossedCandle.High - past24CrossedCandle.Low;
+                                stoploss = box - past24CrossedCandle.Low;
+                                MarketOrder(symbol, -1);
+                                StopMarketOrder(symbol, -1, stoploss);
+                                LimitOrder(symbol, -1, currentBar.Low + box);
+                                Console.WriteLine(
+                                    "\n\n{Open SELL " + "\n"
+                                    + "Crossed: " + crossedCandle.Time + "\n"
+                                    + "past24CrossedCandle: " + past24CrossedCandle.Time + "\n"
+                                    + "BreakOut: " + breakoutCandle.Time + "\n"
+                                    + "PullBack:" + currentBar.Time + "\n"
+                                    + "STOPLOSS: " + stoploss + "\n"
+                                    + "BOXSize: " + box + "}\n\n"
+                                    );
+                                crossedCandle = null;
+                                past24CrossedCandle = null;
+                                breakoutCandle = null;
+                            }
+                        }
+                    }
+                }
+
+                previousLead1 = lead1;
+                previousLead2 = lead2;
+                pullbackCounter += 1;
             }
         }
     }
