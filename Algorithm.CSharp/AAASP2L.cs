@@ -14,7 +14,6 @@ public class AAASP2L : QCAlgorithm, IRegressionAlgorithmDefinition
 {
 
     /*
-     
      Strategy Description:
         1. detect FVG (Fair Value Gap) in the last 3 bars the 3 last bar should be the same color (all green or all red)
         2. if the gap between the first bar and the current bar is greater than the body of the current bar, then it is a valid FVG
@@ -34,11 +33,13 @@ public class AAASP2L : QCAlgorithm, IRegressionAlgorithmDefinition
     private Symbol symbol;
     List<string> Symbols = new();
     Dictionary<string, List<TradeBar>> series = new();
+    private decimal tp1, tp2, tp3;
+    private TradeBar fvgBar;
 
     public override void Initialize()
     {
-        SetStartDate(2025, 05, 01);
-        SetEndDate(2025, 06, 01);
+        SetStartDate(2025, 05, 20);
+        SetEndDate(2025, 06, 10);
         SetCash(10000);
 
         Symbols.Add(AddData<AAAMinute>(symbolName).Symbol);
@@ -68,7 +69,6 @@ public class AAASP2L : QCAlgorithm, IRegressionAlgorithmDefinition
             Securities[symbol].Update(new List<BaseData> { minute.ToTradeBar() }, customData.GetType());
             _tradeBars.Add(customData);
             series[Symbols[0]].Add(customData);
-            Console.WriteLine($"Time: {customData.EndTime}, Open: {customData.Open}, High: {customData.High}, Low: {customData.Low}, Close: {customData.Close}, Volume: {customData.Volume}");
             if (IsWarmingUp || !_tradeBars.IsReady) return;
             FVG();
         }
@@ -82,36 +82,59 @@ public class AAASP2L : QCAlgorithm, IRegressionAlgorithmDefinition
 
         bool isAllGreen = barCurrent.Close > barCurrent.Open && barFVG.Close > barFVG.Open && barFirst.Close > barFirst.Open;
         bool isAllRed = barCurrent.Close < barCurrent.Open && barFVG.Close < barFVG.Open && barFirst.Close < barFirst.Open;
-
         decimal gap = 0;
-
-        if (isAllGreen)
-        {
-            gap = barCurrent.Low - barFirst.High;
-        }
-        else 
-        {
-            gap = barFirst.Low - barCurrent.High;
-        }
+        gap = isAllGreen ? Math.Abs(barCurrent.Low - barFirst.High) : Math.Abs(barCurrent.High - barFirst.Low);
 
         decimal fvgMidPrice = Math.Abs(barFVG.Close + barFVG.Open) / 2;
-        
         decimal bodyCurrentBar = Math.Abs(barCurrent.Close - barCurrent.Open);
         decimal bodyFirstBar = Math.Abs(barFirst.Close - barFirst.Open);
 
-        if (gap > bodyCurrentBar && (isAllGreen || isAllRed))
+        if ((double)gap > ((double)bodyCurrentBar*1.5) && (isAllGreen || isAllRed))
         {
-            Log((isAllGreen ? "Green " : "Red ")+"FVG Detect at " + barFVG.Time);
+            // Log((isAllGreen ? "Green " : "Red ")+"FVG Detect at " + barFVG.Time + " Balance: "+Portfolio.Cash);
 
             decimal stoplossDistance = Math.Abs(barFirst.Low - barCurrent.Low);
 
-            decimal tp1 = isAllGreen ? Securities[symbol].Close + stoplossDistance : Securities[symbol].Close - stoplossDistance;
-            decimal tp2 = isAllGreen ? Securities[symbol].Close + (stoplossDistance * 2) : Securities[symbol].Close - (stoplossDistance * 2);
-            decimal tp3 = isAllGreen ? Securities[symbol].Close + (stoplossDistance * 3) : Securities[symbol].Close - (stoplossDistance * 3);
+            tp1 = isAllGreen ? Securities[symbol].Close + stoplossDistance : Securities[symbol].Close - stoplossDistance;
+            tp2 = isAllGreen ? Securities[symbol].Close + (stoplossDistance * 2) : Securities[symbol].Close - (stoplossDistance * 2);
+            tp3 = isAllGreen ? Securities[symbol].Close + (stoplossDistance * 3) : Securities[symbol].Close - (stoplossDistance * 3);
 
-            MarketOrder(symbol, isAllGreen ? 1 : -1);
-            StopMarketOrder(symbol, isAllGreen ? 1 : -1, stoplossDistance);
-            LimitOrder(symbol, isAllGreen ? 1 : -1, tp1);
+            fvgBar = barCurrent;
+
+            if (isAllGreen)
+            {
+                //stoploss
+                StopMarketOrder(symbol, -3, barFirst.Low);
+                //entry
+                LimitOrder(symbol, 2, fvgMidPrice);
+                LimitOrder(symbol, 1, barCurrent.Low);
+                //exit
+                LimitOrder(symbol, -2, tp1);
+                //LimitOrder(symbol, -1, tp2);
+                TrailingStopOrder(
+                    symbol: symbol,
+                    quantity: -1,
+                    trailingAmount: 1,
+                    trailingAsPercentage: false);
+            }
+            if (isAllRed)
+            {
+                //stoploss
+                StopMarketOrder(symbol, 3, barFirst.Low);
+                //entry
+                LimitOrder(symbol, -2, fvgMidPrice);
+                LimitOrder(symbol, -1, barCurrent.Low);
+                //exit
+                LimitOrder(symbol, 2, tp1);
+                //LimitOrder(symbol, 1, tp2);
+                TrailingStopOrder(
+                    symbol: symbol,
+                    quantity: 1,
+                    trailingAmount: 1,
+                    trailingAsPercentage: false);
+            }
+
+            Log(" Balance: " + Portfolio.Cash + " Current Bar: "+ barCurrent.Time);
 
         }
     }
@@ -124,11 +147,12 @@ public class AAASP2L : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void OnOrderEvent(OrderEvent orderEvent)
     {
-        if (orderEvent.Status == OrderStatus.Invalid && orderEvent.Message.Contains("Insufficient buying power"))
-        {
-            Quit("Critical Margin Issue - Force Quitting Algorithm.");
-        }
+        //if (orderEvent.Status == OrderStatus.Invalid && orderEvent.Message.Contains("Insufficient buying power"))
+        //{
+        //    Quit("Critical Margin Issue - Force Quitting Algorithm.");
+        //}
         Log($"Order: {orderEvent}");
+
     }
 
     public override void OnEndOfAlgorithm()
