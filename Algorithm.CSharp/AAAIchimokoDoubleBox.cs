@@ -35,16 +35,15 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
     decimal previousLead2 = 0;
 
     decimal box = 0;
-    decimal stoploss = 0;
-    decimal takeProfit = 0;
 
     TradeBar crossedCandle;
     TradeBar past24CrossedCandle;
     TradeBar breakoutCandle;
-    bool breakout = false;
-    bool falseBreakout = false;
-    bool pullback = false;
+    bool breakout;
+    bool falseBreakout;
+    bool pullback;
     int pullbackCounter = 0;
+    TradeBar currentBar;
 
     OrderDirection orderDirection;
 
@@ -53,11 +52,12 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void Initialize()
     {
-        SetStartDate(2024, 06, 05);
-        SetEndDate(2025, 06, 10);
+        SetStartDate(2025, 01, 1);
+        SetEndDate(2025, 05, 17);
         SetCash(10000);
 
         Symbols.Add(AddData<AAAMinute5>(symbolName).Symbol);
+        Symbols.Add(AddData<AAAMinute>(symbolName).Symbol);
         symbol = AddCfd(symbolName).Symbol;
         SetWarmUp(100);
         Settings.DailyPreciseEndTime = false;
@@ -79,9 +79,16 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
     public override void OnData(Slice slice)
     {
+        if (slice.First().Value is AAAMinute aaaMinute)
+        {
+            currentBar = aaaMinute.ToTradeBarWithoutSymbol();
+            series[Symbols[1]].Add(currentBar);
+            Securities[symbol].Update(new List<BaseData> { aaaMinute.ToTradeBar() }, currentBar.GetType());
+
+        }
         if (slice.First().Value is AAAMinute5 daily)
         {
-            TradeBar currentBar = daily.ToTradeBarWithoutSymbol();
+            currentBar = daily.ToTradeBarWithoutSymbol();
 
             series[Symbols[0]].Add(currentBar);
             rollingWindows.Add(currentBar);
@@ -93,7 +100,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
             if (_ichimoku.IsReady)
             {
-                Console.WriteLine($"Time: {currentBar.Time}, Lead 1: {_ichimoku.SenkouA}, Lead 2: {_ichimoku.SenkouB}, Tenkan: {_ichimoku.Tenkan}, Kijun: {_ichimoku.Kijun}, Chikou: {_ichimoku.Chikou}, TenkanMax: {_ichimoku.TenkanMaximum}, TenkanMin: {_ichimoku.TenkanMinimum}, KijunMax: {_ichimoku.KijunMaximum}, KijunMin: {_ichimoku.KijunMinimum}, SenkouBMax: {_ichimoku.SenkouBMaximum}, SenkouBMin: {_ichimoku.SenkouBMinimum}, DelayedTenkanSenkouA: {_ichimoku.DelayedTenkanSenkouA}, DelayedKijunSenkouA: {_ichimoku.DelayedKijunSenkouA}, DelayedMaxSenkouB: {_ichimoku.DelayedMaximumSenkouB}, DelayedMinSenkouB: {_ichimoku.DelayedMinimumSenkouB}");
+                // Console.WriteLine($"Time: {currentBar.Time}, Lead 1: {_ichimoku.SenkouA}, Lead 2: {_ichimoku.SenkouB}, Tenkan: {_ichimoku.Tenkan}, Kijun: {_ichimoku.Kijun}, Chikou: {_ichimoku.Chikou}, TenkanMax: {_ichimoku.TenkanMaximum}, TenkanMin: {_ichimoku.TenkanMinimum}, KijunMax: {_ichimoku.KijunMaximum}, KijunMin: {_ichimoku.KijunMinimum}, SenkouBMax: {_ichimoku.SenkouBMaximum}, SenkouBMin: {_ichimoku.SenkouBMinimum}, DelayedTenkanSenkouA: {_ichimoku.DelayedTenkanSenkouA}, DelayedKijunSenkouA: {_ichimoku.DelayedKijunSenkouA}, DelayedMaxSenkouB: {_ichimoku.DelayedMaximumSenkouB}, DelayedMinSenkouB: {_ichimoku.DelayedMinimumSenkouB}");
                 decimal lead1 = _ichimoku.SenkouA;
                 decimal lead2 = _ichimoku.SenkouB;
                 decimal laggingSpanB = _ichimoku.Chikou;
@@ -137,7 +144,6 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                 //crossed
                 if (past24CrossedCandle != null)
                 {
-                    
                     if (orderDirection == OrderDirection.Buy)
                     {
                         //breakout for green
@@ -157,7 +163,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                             }
                         }
                         //pullback
-                        if (currentBar.Low >= past24CrossedCandle.High)
+                        if (currentBar.Low <= past24CrossedCandle.High)
                         {
 
                             //3353.39 - 3348.81 - 3348.81 sell
@@ -166,32 +172,30 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                             if (breakoutCandle != null && pullbackCounter <= 12)
                             {
                                 box = past24CrossedCandle.High - past24CrossedCandle.Low;
-                                takeProfit = Math.Abs(box + past24CrossedCandle.High);
-                                stoploss = Math.Abs(box - past24CrossedCandle.Low);
-                                // MarketOrder(symbol, 1);
-                                // StopMarketOrder(symbol, 1, stoploss);
-                                // LimitOrder(symbol, 1, takeProfit);
-                                client.SendOrderAsync(
-                                    new SendOrderRq(
-                                        OrderTypeRequest.CREATE,
-                                        new MqlTradeRequest
-                                        {
-                                            Symbol = SymbolMapper.leanSymbolToMt(symbolName, MtMarketType.ORBEX, MTType.MT4),
-                                            Volume = 0.01,
-                                            Price = (double)Securities[symbol].Price,
-                                            Sl = (double)stoploss,
-                                            Tp = (double)takeProfit,
-                                        }
-                                    )
-                                );
+                                openPositions(true);
+                                decimal tp3 = Math.Abs(box + past24CrossedCandle.High);
+                                decimal sl3 = Math.Abs(box - past24CrossedCandle.Low);
+                                // client.SendOrderAsync(
+                                //     new SendOrderRq(
+                                //         OrderTypeRequest.CREATE,
+                                //         new MqlTradeRequest
+                                //         {
+                                //             Symbol = SymbolMapper.leanSymbolToMt(symbolName, MtMarketType.ORBEX, MTType.MT4),
+                                //             Volume = 0.01,
+                                //             Price = (double)Securities[symbol].Price,
+                                //             Sl = (double)stoploss,
+                                //             Tp = (double)takeProfit,
+                                //         }
+                                //     )
+                                // );
                                 Console.WriteLine(
                                     "\n\n{Open BUY " + "\n"
                                     + "Crossed: " + crossedCandle.Time + "\n"
                                     + "past24CrossedCandle: " + past24CrossedCandle.Time + "\n"
                                     + "BreakOut: " + breakoutCandle.Time + "\n"
                                     + "PullBack:" + currentBar.Time + "\n"
-                                    + "STOPLOSS: " + stoploss + "\n"
-                                    + "TAKEPROFIT: " + takeProfit + "\n"
+                                    + "STOPLOSS: " + sl3 + "\n"
+                                    + "TAKEPROFIT: " + tp3 + "\n"
                                     + "BOXSize: " + box + "}\n\n"
                                     );
                                 crossedCandle = null;
@@ -224,32 +228,30 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                             if (breakoutCandle != null && pullbackCounter <= 12)
                             {
                                 box = past24CrossedCandle.High - past24CrossedCandle.Low;
-                                takeProfit = Math.Abs(box - past24CrossedCandle.Low);
-                                stoploss = Math.Abs(box + past24CrossedCandle.High);
-                                // MarketOrder(symbol, -1);
-                                // StopMarketOrder(symbol, -1, stoploss);
-                                // LimitOrder(symbol, -1, takeProfit);
-                                client.SendOrderAsync(
-                                    new SendOrderRq(
-                                        OrderTypeRequest.CREATE,
-                                        new MqlTradeRequest
-                                        {
-                                            Symbol = SymbolMapper.leanSymbolToMt(symbolName, MtMarketType.ORBEX, MTType.MT4),
-                                            Volume = 0.01,
-                                            Price = (double)Securities[symbol].Price,
-                                            Sl = (double)stoploss,
-                                            Tp = (double)takeProfit,
-                                        }
-                                    )
-                                );
+                                openPositions(false);
+                                decimal tp3 = Math.Abs(box - past24CrossedCandle.Low);
+                                decimal sl3 = Math.Abs(box + past24CrossedCandle.High);
+                                // client.SendOrderAsync(
+                                //     new SendOrderRq(
+                                //         OrderTypeRequest.CREATE,
+                                //         new MqlTradeRequest
+                                //         {
+                                //             Symbol = SymbolMapper.leanSymbolToMt(symbolName, MtMarketType.ORBEX, MTType.MT4),
+                                //             Volume = 0.01,
+                                //             Price = (double)Securities[symbol].Price,
+                                //             Sl = (double)stoploss,
+                                //             Tp = (double)takeProfit,
+                                //         }
+                                //     )
+                                // );
                                 Console.WriteLine(
                                     "\n\n{Open SELL " + "\n"
                                     + "Crossed: " + crossedCandle.Time + "\n"
                                     + "past24CrossedCandle: " + past24CrossedCandle.Time + "\n"
                                     + "BreakOut: " + breakoutCandle.Time + "\n"
                                     + "PullBack:" + currentBar.Time + "\n"
-                                    + "STOPLOSS: " + stoploss + "\n"
-                                    + "TAKEPROFIT: " + takeProfit + "\n"
+                                    + "STOPLOSS: " + sl3 + "\n"
+                                    + "TAKEPROFIT: " + tp3 + "\n"
                                     + "BOXSize: " + box + "}\n\n"
                                     );
                                 crossedCandle = null;
@@ -267,6 +269,95 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
         }
     }
 
+    public void openPositions(bool isBuy) {
+        if (isBuy)
+        {
+            //    decimal tp1 = Math.Abs(box + past24CrossedCandle.High);
+            //    decimal tp2 = Math.Abs(box + past24CrossedCandle.High + 3);
+            //    decimal tp3 = Math.Abs(box + past24CrossedCandle.High + 3);
+            //    decimal sl1 = Math.Abs(box - past24CrossedCandle.Low);
+            //    decimal sl2 = Math.Abs(box - past24CrossedCandle.Low - 3);
+            //    decimal sl3 = Math.Abs(box - past24CrossedCandle.Low - 3);
+            //    MarketOrder(symbol, 3);
+            //    StopMarketOrder(symbol, -1.5, sl1);
+            //    StopMarketOrder(symbol, -1, sl2);
+            //    StopMarketOrder(symbol, -0.5, sl3);
+            //    LimitOrder(symbol, -1.5, tp1);
+            //    LimitOrder(symbol, -1, tp2);
+            //    LimitOrder(symbol, -0.5, tp3);
+
+
+            //decimal tp1 = Math.Abs(box + past24CrossedCandle.High);
+            //decimal sl1 = Math.Abs(box - past24CrossedCandle.Low);
+
+            decimal tp1 = past24CrossedCandle.High + box;
+            decimal sl1 = past24CrossedCandle.Low - box;
+            MarketOrder(symbol, 1);
+            //StopMarketOrder(symbol, -1, sl1);
+            //LimitOrder(symbol, -1, tp1);
+            //StopLimitOrder(symbol, -1, sl1, tp1);
+
+
+            TrailingStopOrder(
+                symbol: symbol,
+                quantity: -1,
+                trailingAmount: box * 3,
+                trailingAsPercentage: false);
+
+            //if (currentBar.Close > tp1 || currentBar.Close < sl1)
+            //{
+            //    Liquidate(symbol);
+            //}
+            //else if (!Portfolio.Invested)
+            //{
+            //    MarketOrder(symbol, 1);
+            //}
+        }
+        else
+        {
+
+            //    decimal tp1 = Math.Abs(box - past24CrossedCandle.High);
+            //    decimal tp2 = Math.Abs(box - past24CrossedCandle.High - 3);
+            //    decimal tp3 = Math.Abs(box - past24CrossedCandle.High - 3);
+            //    decimal sl1 = Math.Abs(box + past24CrossedCandle.Low);
+            //    decimal sl2 = Math.Abs(box + past24CrossedCandle.Low + 3);
+            //    decimal sl3 = Math.Abs(box + past24CrossedCandle.Low + 3);
+            //    MarketOrder(symbol, -3);
+            //    StopMarketOrder(symbol, 1.5, sl1);
+            //    StopMarketOrder(symbol, 1, sl2);
+            //    StopMarketOrder(symbol, 0.5, sl3);
+            //    LimitOrder(symbol, 1.5, tp1);
+            //    LimitOrder(symbol, 1, tp2);
+            //    LimitOrder(symbol, 0.5, tp3);
+
+
+            //decimal tp1 = Math.Abs(box - past24CrossedCandle.High);
+            //decimal sl1 = Math.Abs(box + past24CrossedCandle.Low);
+
+            decimal tp1 = past24CrossedCandle.Low - box;
+            decimal sl1 = past24CrossedCandle.High + box;
+            MarketOrder(symbol, -1);
+            //StopMarketOrder(symbol, 1, sl1);
+            //LimitOrder(symbol, 1, tp1);
+            //StopLimitOrder(symbol, 1, sl1, tp1);
+
+
+            TrailingStopOrder(
+                symbol: symbol,
+                quantity: 1,
+                trailingAmount: box * 3,
+                trailingAsPercentage: false);
+
+            //if (currentBar.Close < tp1 || currentBar.Close > sl1)
+            //{
+            //    Liquidate(symbol);
+            //}
+            //else if (!Portfolio.Invested) {
+            //    MarketOrder(symbol, -1);
+            //}
+        }
+
+    }
 
     public override void OnSecuritiesChanged(SecurityChanges changes)
     {
