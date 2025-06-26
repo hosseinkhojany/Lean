@@ -37,7 +37,6 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
     decimal box = 0;
 
     TradeBar crossedCandle;
-    TradeBar past24CrossedCandle;
     TradeBar breakoutCandle;
     bool breakout;
     bool falseBreakout;
@@ -114,7 +113,6 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                     {
                         TradeBar past24Candle = rollingWindows[1];
                         crossedCandle = currentBar;
-                        past24CrossedCandle = past24Candle;
                         Log("24 candle past: " + past24Candle.Time);
                         //RED TO GREEN (GREEN-BUY) BOX SET TO BOTTOM 
                         Log("\n\n\n Lead1 (GREEN) has crossed above Lead2. " + currentBar.Time + " \n\n\n");
@@ -131,7 +129,6 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                     {
                         TradeBar past24Candle = rollingWindows[1];
                         crossedCandle = currentBar;
-                        past24CrossedCandle = past24Candle;
                         Log("24 candle past: " + past24Candle.Time);
                         //GREEN TO RED (RED-SELL) BOX SET TO TOP
                         Log(" \n\n\nLead2 (RED) has crossed above Lead1. " + currentBar.Time+ "\n\n\n");
@@ -142,14 +139,14 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
 
                 }
                 //crossed
-                if (past24CrossedCandle != null)
+                if (crossedCandle != null)
                 {
                     if (orderDirection == OrderDirection.Buy)
                     {
                         //breakout for green
                         if (currentBar.Open < currentBar.Close)
                         {
-                            if (currentBar.Open >= past24CrossedCandle.High)
+                            if (currentBar.Open >= crossedCandle.High)
                             {
                                 breakoutCandle = currentBar;
                             }
@@ -157,13 +154,13 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                         //breakout for sell
                         else
                         {
-                            if (currentBar.Close >= past24CrossedCandle.High)
+                            if (currentBar.Close >= crossedCandle.High)
                             {
                                 breakoutCandle = currentBar;
                             }
                         }
                         //pullback
-                        if (currentBar.Low <= past24CrossedCandle.High)
+                        if (currentBar.Low <= crossedCandle.High)
                         {
 
                             //3353.39 - 3348.81 - 3348.81 sell
@@ -171,10 +168,10 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                             //check breakout and 12 candle achived or not 
                             if (breakoutCandle != null && pullbackCounter <= 12)
                             {
-                                box = past24CrossedCandle.High - past24CrossedCandle.Low;
+                                box = crossedCandle.High - crossedCandle.Low;
                                 openPositions(true);
-                                decimal tp3 = Math.Abs(box + past24CrossedCandle.High);
-                                decimal sl3 = Math.Abs(box - past24CrossedCandle.Low);
+                                decimal tp3 = Math.Abs(box + crossedCandle.High);
+                                decimal sl3 = Math.Abs(box - crossedCandle.Low);
                                 // client.SendOrderAsync(
                                 //     new SendOrderRq(
                                 //         OrderTypeRequest.CREATE,
@@ -191,7 +188,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                                 Console.WriteLine(
                                     "\n\n{Open BUY " + "\n"
                                     + "Crossed: " + crossedCandle.Time + "\n"
-                                    + "past24CrossedCandle: " + past24CrossedCandle.Time + "\n"
+                                    + "crossedCandle: " + crossedCandle.Time + "\n"
                                     + "BreakOut: " + breakoutCandle.Time + "\n"
                                     + "PullBack:" + currentBar.Time + "\n"
                                     + "STOPLOSS: " + sl3 + "\n"
@@ -199,7 +196,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                                     + "BOXSize: " + box + "}\n\n"
                                     );
                                 crossedCandle = null;
-                                past24CrossedCandle = null;
+                                crossedCandle = null;
                                 breakoutCandle = null;
                             }
                         }
@@ -209,7 +206,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                         //breakout for green
                         if (currentBar.Open < currentBar.Close)
                         {
-                            if (currentBar.Close <= past24CrossedCandle.Low)
+                            if (currentBar.Close <= crossedCandle.Low)
                             {
                                 breakoutCandle = currentBar;
                             }
@@ -217,20 +214,20 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                         //breakout for sell
                         else
                         {
-                            if (currentBar.Open <= past24CrossedCandle.Low)
+                            if (currentBar.Open <= crossedCandle.Low)
                             {
                                 breakoutCandle = currentBar;
                             }
                         }
-                        if (currentBar.High >= past24CrossedCandle.Low)
+                        if (currentBar.High >= crossedCandle.Low)
                         {
 
                             if (breakoutCandle != null && pullbackCounter <= 12)
                             {
-                                box = past24CrossedCandle.High - past24CrossedCandle.Low;
+                                box = crossedCandle.High - crossedCandle.Low;
                                 openPositions(false);
-                                decimal tp3 = Math.Abs(box - past24CrossedCandle.Low);
-                                decimal sl3 = Math.Abs(box + past24CrossedCandle.High);
+                                decimal tp3 = Math.Abs(box - crossedCandle.Low);
+                                decimal sl3 = Math.Abs(box + crossedCandle.High);
                                 // client.SendOrderAsync(
                                 //     new SendOrderRq(
                                 //         OrderTypeRequest.CREATE,
@@ -247,7 +244,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                                 Console.WriteLine(
                                     "\n\n{Open SELL " + "\n"
                                     + "Crossed: " + crossedCandle.Time + "\n"
-                                    + "past24CrossedCandle: " + past24CrossedCandle.Time + "\n"
+                                    + "crossedCandle: " + crossedCandle.Time + "\n"
                                     + "BreakOut: " + breakoutCandle.Time + "\n"
                                     + "PullBack:" + currentBar.Time + "\n"
                                     + "STOPLOSS: " + sl3 + "\n"
@@ -255,7 +252,7 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
                                     + "BOXSize: " + box + "}\n\n"
                                     );
                                 crossedCandle = null;
-                                past24CrossedCandle = null;
+                                crossedCandle = null;
                                 breakoutCandle = null;
                             }
                         }
@@ -272,12 +269,12 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
     public void openPositions(bool isBuy) {
         if (isBuy)
         {
-            //    decimal tp1 = Math.Abs(box + past24CrossedCandle.High);
-            //    decimal tp2 = Math.Abs(box + past24CrossedCandle.High + 3);
-            //    decimal tp3 = Math.Abs(box + past24CrossedCandle.High + 3);
-            //    decimal sl1 = Math.Abs(box - past24CrossedCandle.Low);
-            //    decimal sl2 = Math.Abs(box - past24CrossedCandle.Low - 3);
-            //    decimal sl3 = Math.Abs(box - past24CrossedCandle.Low - 3);
+            //    decimal tp1 = Math.Abs(box + crossedCandle.High);
+            //    decimal tp2 = Math.Abs(box + crossedCandle.High + 3);
+            //    decimal tp3 = Math.Abs(box + crossedCandle.High + 3);
+            //    decimal sl1 = Math.Abs(box - crossedCandle.Low);
+            //    decimal sl2 = Math.Abs(box - crossedCandle.Low - 3);
+            //    decimal sl3 = Math.Abs(box - crossedCandle.Low - 3);
             //    MarketOrder(symbol, 3);
             //    StopMarketOrder(symbol, -1.5, sl1);
             //    StopMarketOrder(symbol, -1, sl2);
@@ -287,22 +284,22 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
             //    LimitOrder(symbol, -0.5, tp3);
 
 
-            //decimal tp1 = Math.Abs(box + past24CrossedCandle.High);
-            //decimal sl1 = Math.Abs(box - past24CrossedCandle.Low);
+            //decimal tp1 = Math.Abs(box + crossedCandle.High);
+            //decimal sl1 = Math.Abs(box - crossedCandle.Low);
 
-            decimal tp1 = past24CrossedCandle.High + box;
-            decimal sl1 = past24CrossedCandle.Low - box;
+            decimal tp1 = crossedCandle.High + box;
+            decimal sl1 = crossedCandle.Low - box;
             MarketOrder(symbol, 1);
-            //StopMarketOrder(symbol, -1, sl1);
-            //LimitOrder(symbol, -1, tp1);
+            StopMarketOrder(symbol, -1, sl1);
+            LimitOrder(symbol, -1, tp1);
             //StopLimitOrder(symbol, -1, sl1, tp1);
 
 
-            TrailingStopOrder(
-                symbol: symbol,
-                quantity: -1,
-                trailingAmount: box * 3,
-                trailingAsPercentage: false);
+            // TrailingStopOrder(
+            //     symbol: symbol,
+            //     quantity: -1,
+            //     trailingAmount: box * 3,
+            //     trailingAsPercentage: false);
 
             //if (currentBar.Close > tp1 || currentBar.Close < sl1)
             //{
@@ -316,12 +313,12 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
         else
         {
 
-            //    decimal tp1 = Math.Abs(box - past24CrossedCandle.High);
-            //    decimal tp2 = Math.Abs(box - past24CrossedCandle.High - 3);
-            //    decimal tp3 = Math.Abs(box - past24CrossedCandle.High - 3);
-            //    decimal sl1 = Math.Abs(box + past24CrossedCandle.Low);
-            //    decimal sl2 = Math.Abs(box + past24CrossedCandle.Low + 3);
-            //    decimal sl3 = Math.Abs(box + past24CrossedCandle.Low + 3);
+            //    decimal tp1 = Math.Abs(box - crossedCandle.High);
+            //    decimal tp2 = Math.Abs(box - crossedCandle.High - 3);
+            //    decimal tp3 = Math.Abs(box - crossedCandle.High - 3);
+            //    decimal sl1 = Math.Abs(box + crossedCandle.Low);
+            //    decimal sl2 = Math.Abs(box + crossedCandle.Low + 3);
+            //    decimal sl3 = Math.Abs(box + crossedCandle.Low + 3);
             //    MarketOrder(symbol, -3);
             //    StopMarketOrder(symbol, 1.5, sl1);
             //    StopMarketOrder(symbol, 1, sl2);
@@ -331,22 +328,22 @@ public class AAAIchimokoDoubleBox : QCAlgorithm, IRegressionAlgorithmDefinition
             //    LimitOrder(symbol, 0.5, tp3);
 
 
-            //decimal tp1 = Math.Abs(box - past24CrossedCandle.High);
-            //decimal sl1 = Math.Abs(box + past24CrossedCandle.Low);
+            //decimal tp1 = Math.Abs(box - crossedCandle.High);
+            //decimal sl1 = Math.Abs(box + crossedCandle.Low);
 
-            decimal tp1 = past24CrossedCandle.Low - box;
-            decimal sl1 = past24CrossedCandle.High + box;
+            decimal tp1 = crossedCandle.Low - box;
+            decimal sl1 = crossedCandle.High + box;
             MarketOrder(symbol, -1);
-            //StopMarketOrder(symbol, 1, sl1);
-            //LimitOrder(symbol, 1, tp1);
+            StopMarketOrder(symbol, 1, sl1);
+            LimitOrder(symbol, 1, tp1);
             //StopLimitOrder(symbol, 1, sl1, tp1);
 
 
-            TrailingStopOrder(
-                symbol: symbol,
-                quantity: 1,
-                trailingAmount: box * 3,
-                trailingAsPercentage: false);
+            // TrailingStopOrder(
+            //     symbol: symbol,
+            //     quantity: 1,
+            //     trailingAmount: box * 3,
+            //     trailingAsPercentage: false);
 
             //if (currentBar.Close < tp1 || currentBar.Close > sl1)
             //{
