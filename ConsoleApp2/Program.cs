@@ -1,4 +1,4 @@
-﻿namespace ConsoleApp2;
+namespace ConsoleApp2;
 
 public class Program
 {
@@ -41,10 +41,11 @@ public class Program
 
     
     private static List<int> newsWinRate = [1, 1, 0, 1, 0, 1, 1, 0, 1, 1];
-    private static decimal newsProfitFactor = 4;
+    private static decimal newsMinProfitFactor = 1.5m;
+    private static decimal newsMaxProfitFactor = 2.5m;
     private static decimal newsLossFactor = 1;
     private static decimal newsTriggers = 1;
-    private static bool newsHedging = false;
+    private static bool newsHedging = true;
 
     //temp
     private static int currentMonth = 1;
@@ -55,7 +56,7 @@ public class Program
     private static bool newsDone = false;
 
 
-    public static void Main(string[] args) 
+    public static void Main2(string[] args) 
     {
         for (int i = 1; i < (years * daysInYear); i++)
         {
@@ -144,15 +145,15 @@ public class Program
     {
         if (newsHedging)
         {
-            decimal randomProfitPercent = Utils.RandomDecimal(s2minNetProfit, s2maxNetProfit);
-            
+            newsBalance += (newsRiskWithPercent / 100 * newsBalance) * Utils.RandomDecimal(newsMinProfitFactor, newsMaxProfitFactor);
+            newsBalance += (newsRiskWithPercent / 100 * newsBalance) * newsLossFactor;
             return 0;
         }
         else
         {
             if (newsWinRate[new Random().Next(0, newsWinRate.Count - 1)] == 1)
             {
-                newsBalance += (newsRiskWithPercent / 100 * newsBalance) * newsProfitFactor;
+                newsBalance += (newsRiskWithPercent / 100 * newsBalance) * Utils.RandomDecimal(newsMinProfitFactor, newsMaxProfitFactor);
             }
             else
             {
