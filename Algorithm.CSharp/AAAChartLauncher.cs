@@ -149,29 +149,38 @@ class AAAChartLauncher
                 }
                 else if (path.EndsWith(".html"))
                 {
-                    using (var serverProcess = new Process())
-                    {
-                        serverProcess.StartInfo = new ProcessStartInfo
-                        {
-                            FileName = "cmd.exe",
-                            Arguments = "/C python -m http.server",
-                            WorkingDirectory = path.Split("index.html").First(),
-                            CreateNoWindow = true,
-                            UseShellExecute = false
-                        };
-                        serverProcess.Start();
-                    }
+                    bool isProcessRunning = Process.GetProcesses().Any(p => p.ProcessName.Equals("python", StringComparison.OrdinalIgnoreCase));
 
-                    using (var browserProcess = new Process())
+                    if (!isProcessRunning)
                     {
-                        browserProcess.StartInfo = new ProcessStartInfo
+                        using (var serverProcess = new Process())
                         {
-                            FileName = "cmd.exe",
-                            Arguments = "/C start http://localhost:8000/index.html",
-                            CreateNoWindow = true,
-                            UseShellExecute = false
-                        };
-                        browserProcess.Start();
+                            serverProcess.StartInfo = new ProcessStartInfo
+                            {
+                                FileName = "cmd.exe",
+                                Arguments = $"/C python -m http.server",
+                                WorkingDirectory = path.Split("index.html").First(),
+                                CreateNoWindow = true,
+                                UseShellExecute = false
+                            };
+                            serverProcess.Start();
+                        }
+
+                        using (var browserProcess = new Process())
+                        {
+                            browserProcess.StartInfo = new ProcessStartInfo
+                            {
+                                FileName = "cmd.exe",
+                                Arguments = "/C start http://localhost:8000/index.html",
+                                CreateNoWindow = true,
+                                UseShellExecute = false
+                            };
+                            browserProcess.Start();
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("A Python process is already running.");
                     }
                 }
             }
