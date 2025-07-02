@@ -22,11 +22,13 @@ public class AAATrendAlert : QCAlgorithm, IRegressionAlgorithmDefinition
     private SimpleMovingAverage simpleMovingAverage;
     private PivotPointsHighLow pivotHighLow;
     private Engulfing engulfing;
+    private int rangeCount = 0;
+    private decimal currentTrend = 0;
+    
+    //TrendAlert Indicator components
     HeikinAshi ltHA;
     HeikinAshi mtHA;
     ExponentialMovingAverage mtEMA20;
-    private int rangeCount = 0;
-    private decimal currentTrend = 0;
 
     Dictionary<string, List<TradeBar>> series = new();
     private RollingWindow<TradeBar> rollingWindowsCandle15m = new RollingWindow<TradeBar>(200);

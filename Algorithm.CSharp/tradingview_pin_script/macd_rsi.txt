@@ -1,0 +1,103 @@
+//@version=5
+strategy("Multi-Timeframe MACD/StochRSI Strategy", overlay=true, initial_capital=10000, default_qty_value=1, default_qty_type=strategy.fixed)
+
+// -----------------------------------------------------------------------------
+// INPUTS AND INDICATOR DEFINITIONS
+// -----------------------------------------------------------------------------
+
+// -- 15-Minute Timeframe --
+// MACD Settings
+fast_length_15m = 12
+slow_length_15m = 26
+signal_length_15m = 9 // This was the missing parameter's value
+// Stochastic RSI Settings
+stoch_rsi_length_15m = 14
+stoch_k_15m = 3
+stoch_d_15m = 3
+rsi_length_15m = 14
+
+// -- 4-Hour Timeframe --
+// MACD Settings
+fast_length_4h = 12
+slow_length_4h = 26
+signal_length_4h = 9 // This was the missing parameter's value
+
+// -----------------------------------------------------------------------------
+// DATA RETRIEVAL FROM HIGHER TIMEFRAMES
+// -----------------------------------------------------------------------------
+
+// Request 4-Hour Data - Corrected to use ta.macd() properly
+[macd_4h, signal_4h, hist_4h] = request.security(syminfo.tickerid, "240", ta.macd(close, fast_length_4h, slow_length_4h, signal_length_4h))
+
+// -----------------------------------------------------------------------------
+// INDICATOR CALCULATIONS ON THE CURRENT (15-MINUTE) TIMEFRAME
+// -----------------------------------------------------------------------------
+
+// -- 15-Minute MACD -- Corrected with the signal length parameter
+[macd_15m, signal_15m, hist_15m] = ta.macd(close, fast_length_15m, slow_length_15m, signal_length_15m)
+
+// -- 15-Minute Stochastic RSI --
+rsi_15m = ta.rsi(close, rsi_length_15m)
+k_15m = ta.sma(ta.stoch(rsi_15m, rsi_15m, rsi_15m, stoch_rsi_length_15m), stoch_k_15m)
+d_15m = ta.sma(k_15m, stoch_d_15m)
+
+// -----------------------------------------------------------------------------
+// STRATEGY LOGIC
+// -----------------------------------------------------------------------------
+
+// --- Entry Conditions ---
+// Condition 1: 4-hour MACD histogram is positive or showing strong upward momentum.
+entry_cond1_4h = hist_4h > -1
+
+// Condition 2: Alternative strong momentum on 4-hour and 15-minute charts.
+entry_cond2_momentum = macd_4h > 6 and signal_4h > 6 and ta.rising(hist_4h, 1) and hist_15m > 0.8
+
+// Condition 3: 15-minute chart shows clear bullish signals.
+entry_cond3_15m = ta.rising(hist_15m, 1) and macd_15m > signal_15m and k_15m > 51 and d_15m > 51 and k_15m > d_15m
+
+// Combine entry conditions
+long_entry_condition = entry_cond1_4h or entry_cond2_momentum or entry_cond3_15m
+
+// --- Exit Conditions ---
+// Track the highest K and D values since the last entry
+var float highest_k_since_entry = na
+var float highest_d_since_entry = na
+
+if (strategy.position_size > 0)
+    highest_k_since_entry := math.max(k_15m, nz(highest_k_since_entry))
+    highest_d_since_entry := math.max(d_15m, nz(highest_d_since_entry))
+else
+    highest_k_since_entry := na
+    highest_d_since_entry := na
+
+// Define exit signals
+exit_cond1 = hist_15m < 0
+exit_cond2 = (hist_15m * 1.25) - hist_15m[1] < 0
+exit_cond3 = macd_15m < signal_15m
+exit_cond4 = (k_15m <= 50 and highest_k_since_entry > 53 and highest_k_since_entry < 80)
+exit_cond5 = (d_15m <= 50 and highest_d_since_entry > 53 and highest_d_since_entry < 80)
+exit_cond6 = (k_15m <= 80 and highest_k_since_entry >= 80)
+exit_cond7 = (d_15m <= 80 and highest_d_since_entry >= 80)
+exit_cond8 = k_15m + 5 < d_15m
+
+// Combine exit conditions
+long_exit_condition = exit_cond1 or exit_cond2 or exit_cond3 or exit_cond4 or exit_cond5 or exit_cond6 or exit_cond7 or exit_cond8
+
+// --- Strategy Execution ---
+// Only enter a long position if the entry conditions are met AND we are not already in a position.
+if (long_entry_condition and strategy.position_size == 0)
+    strategy.entry("Long", strategy.long)
+
+// Close the long position if the exit conditions are met.
+if (long_exit_condition)
+    strategy.close("Long")
+    
+// --- Weekend Liquidation ---
+if (dayofweek == dayofweek.friday and ta.change(time("D")) != 0)
+    strategy.close_all()
+    
+
+// -----------------------------------------------------------------------------
+// PLOTTING FOR VISUALIZATION (Optional)
+// -----------------------------------------------------------------------------
+plotchar(strategy.position_size > 0, "Position Open", "▲", location.belowbar, color=color.new(color.green, 0), size=size.tiny)

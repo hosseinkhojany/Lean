@@ -1,4 +1,7 @@
+using QuantConnect.Indicators;
+
 namespace QuantConnect.Algorithm.CSharp;
+
 
 using System.Collections.Generic;
 using System.Linq;
@@ -11,29 +14,37 @@ using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Indicators.CandlestickPatterns;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders;
+using System;
 
-public class AAATemplate : QCAlgorithm, IRegressionAlgorithmDefinition
+public class AAAThreeRSI : QCAlgorithm, IRegressionAlgorithmDefinition
 {
     private string symbolName = "XAUUSD";
     private Symbol symbol;
-    private DojiStar testIndicator;
     List<string> Symbols = new();
 
     Dictionary<string, List<TradeBar>> series = new();
     
+    private RelativeStrengthIndex longTermRsi;
+    private RelativeStrengthIndex midTermRsi;
+    private RelativeStrengthIndex shortTermRsi;
         
-
     public override void Initialize()
     {
         SetStartDate(2025, 01, 01);
         SetEndDate(2025, 04, 04);
         SetCash(10000);
 
-        Symbols.Add(AddData<AAAHour4>(symbolName).Symbol);
+        Symbols.Add(AddData<AAAHour2>(symbolName).Symbol);
+        Symbols.Add(AddData<AAAMinute15>(symbolName).Symbol);
+        Symbols.Add(AddData<AAAMinute3>(symbolName).Symbol);
+
         symbol = AddCfd(symbolName).Symbol;
-        SetWarmUp(15);
+        SetWarmUp(TimeSpan.FromHours(15));
         Settings.DailyPreciseEndTime = false;
-        testIndicator = new DojiStar(symbolName);
+        
+        longTermRsi = new RelativeStrengthIndex(symbol, 12, MovingAverageType.Simple);
+        midTermRsi = new RelativeStrengthIndex(symbol, 28, MovingAverageType.Simple);
+        shortTermRsi = new RelativeStrengthIndex(symbol, 68, MovingAverageType.Simple);
 
         foreach (var t in Symbols)
         {
@@ -55,12 +66,61 @@ public class AAATemplate : QCAlgorithm, IRegressionAlgorithmDefinition
             TradeBar currentBar = aaaHour4.ToTradeBarWithoutSymbol();
             series[Symbols[0]].Add(currentBar);
             Securities[symbol].Update(new List<BaseData> { aaaHour4.ToTradeBar() }, currentBar.GetType());
-            testIndicator.Update(currentBar);
+            longTermRsi.Update(currentBar);
             if (IsWarmingUp) return;
 
-            if (testIndicator.IsReady)
-            {
+        }
+        else if (slice.First().Value is AAAMinute30 AAAMinute30)
+        {
+            TradeBar currentBar = AAAMinute30.ToTradeBarWithoutSymbol();
+            series[Symbols[1]].Add(currentBar);
+            Securities[symbol].Update(new List<BaseData> { AAAMinute30.ToTradeBar() }, currentBar.GetType());
+            midTermRsi.Update(currentBar);
+            if (IsWarmingUp) return;
 
+        }
+        else if (slice.First().Value is AAAMinute5 AAAMinute5)
+        {
+            TradeBar currentBar = AAAMinute5.ToTradeBarWithoutSymbol();
+            series[Symbols[0]].Add(currentBar);
+            Securities[symbol].Update(new List<BaseData> { AAAMinute5.ToTradeBar() }, currentBar.GetType());
+            shortTermRsi.Update(currentBar);
+            if (IsWarmingUp) return;
+
+        }
+        else if (slice.First().Value is AAAMinute3 AAAMinute3)
+        {
+            TradeBar currentBar = AAAMinute3.ToTradeBarWithoutSymbol();
+            series[Symbols[0]].Add(currentBar);
+            Securities[symbol].Update(new List<BaseData> { AAAMinute3.ToTradeBar() }, currentBar.GetType());
+            shortTermRsi.Update(currentBar);
+            if (IsWarmingUp) return;
+
+        }
+
+        if (!longTermRsi.IsReady || !midTermRsi.IsReady || !shortTermRsi.IsReady) return;
+
+        if (longTermRsi > midTermRsi && longTermRsi > shortTermRsi && midTermRsi > shortTermRsi)
+        {
+            SetHoldings(symbol, 1.0);
+            Log("Enter bye: " + Time);
+        }
+        else if (longTermRsi < midTermRsi && longTermRsi < shortTermRsi && midTermRsi < shortTermRsi)
+        {
+            SetHoldings(symbol, -1.0);
+            Log("Enter sell: " + Time);
+        }
+        else
+        {
+            if (longTermRsi < midTermRsi || midTermRsi < shortTermRsi)
+            {
+                Liquidate(symbol);
+                Log("Liquate: " + Time);
+            }
+            else if (longTermRsi > midTermRsi || midTermRsi > shortTermRsi)
+            {
+                Liquidate(symbol);
+                Log("Liquate: " + Time);
             }
         }
     }
@@ -133,3 +193,4 @@ public class AAATemplate : QCAlgorithm, IRegressionAlgorithmDefinition
         { "OrderListHash", "d38318f2dd0a38f11ef4e4fd704706a7" }
     };
 }
+

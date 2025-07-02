@@ -56,7 +56,7 @@ namespace QuantConnect.Algorithm.CSharp
             SetCash(10000);
             
             Symbols.Add(AddData<AAAMinute15>(symbolName).Symbol);
-            Symbols.Add(AddData<AAAHour2>(symbolName).Symbol);
+            Symbols.Add(AddData<AAAHour4>(symbolName).Symbol);
             // Symbols.Add(AddData<AAAMinute5>(symbolName).Symbol);
             // Symbols.Add(AddData<AAADaily>(symbolName).Symbol);
 
@@ -123,7 +123,7 @@ namespace QuantConnect.Algorithm.CSharp
                     first15MinuteCandleOfStartOfDay = xauusdData;
                 }
             }
-            else if (data.First().Value is AAAHour2 hour)
+            else if (data.First().Value is AAAHour4 hour)
             {
                 xauusdData = hour.ToTradeBarWithoutSymbol();
                 macd4h.Update(xauusdData);
@@ -222,25 +222,14 @@ namespace QuantConnect.Algorithm.CSharp
                         }
                     }
                     else if (
-                        // currentHistogram15m < 0
-                        // || (currentHistogram15m * 1.25m) - previousHistogram15m < 0
-                        // || macd15m.Current.Value < macd15m.Signal.Current.Value
-                        // || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
-                        // || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
-                        // || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
-                        // || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
-                        // || currentK15m + 5 < currentD15m
-                        xauusdData.Close >= pivotIndicator.R1 ||
-                        xauusdData.Close >= pivotIndicator.R2 ||
-                        xauusdData.Close >= pivotIndicator.R3 ||
-                        xauusdData.Close >= pivotIndicator.R4 ||
-                        xauusdData.Close >= pivotIndicator.R5
-                        // ||
-                        // xauusdData.Close >= pivotIndicator.S1 ||
-                        // xauusdData.Close >= pivotIndicator.S2 ||
-                        // xauusdData.Close >= pivotIndicator.S3 ||
-                        // xauusdData.Close >= pivotIndicator.S4 ||
-                        // xauusdData.Close >= pivotIndicator.S5
+                         currentHistogram15m < 0
+                         || (currentHistogram15m * 1.25m) - previousHistogram15m < 0
+                         || macd15m.Current.Value < macd15m.Signal.Current.Value
+                         || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
+                         || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
+                         || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
+                         || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
+                         || currentK15m + 5 < currentD15m
                     )
                     {
                         Liquidate(symbolName); // Exit position   
