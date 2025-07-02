@@ -12,6 +12,7 @@ using QuantConnect.Securities;
 using System.Globalization;
 using MathNet.Numerics;
 using System.Diagnostics;
+using QuantConnect.Indicators.CandlestickPatterns;
 
 namespace QuantConnect.Algorithm.CSharp
 {
@@ -159,9 +160,6 @@ namespace QuantConnect.Algorithm.CSharp
                 decimal currentK4h = srsi4h.K.Current.Value;
                 decimal currentD4h = srsi4h.D.Current.Value;
 
-                // decimal currentHistogram = macd15m.Current.Value;
-                // decimal currentHistogram = macd15m.Signal.Current.Value;
-
                 if (previousHistogram15m.HasValue && previousHistogram4h.HasValue)
                 {
 
@@ -197,14 +195,14 @@ namespace QuantConnect.Algorithm.CSharp
                     }
 
                     if (
-                        currentHistogram4h > -1 ||
-
                             (macd4h.Current.Value > 6 &&
                             macd4h.Signal.Current.Value > 6 &&
                             currentHistogram4h > previousHistogram4h &&
-                        currentHistogram15m > 0.8m) ||
-
-                        (currentHistogram15m - previousHistogram15m > 0 &&
+                            currentK4h > 23 &&
+                            currentD4h > 23 &&
+                        currentHistogram15m > 0.8m) 
+                            ||
+                        (currentHistogram4h > -1.6m && currentHistogram15m - previousHistogram15m > 0 &&
                         macd15m.Current.Value > macd15m.Signal.Current.Value &&
                         currentK15m > 51 &&
                         currentD15m > 51 &&
@@ -222,14 +220,25 @@ namespace QuantConnect.Algorithm.CSharp
                         }
                     }
                     else if (
-                         currentHistogram15m < 0
-                         || (currentHistogram15m * 1.25m) - previousHistogram15m < 0
-                         || macd15m.Current.Value < macd15m.Signal.Current.Value
-                         || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
-                         || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
-                         || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
-                         || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
-                         || currentK15m + 5 < currentD15m
+                        currentHistogram15m < 0
+                        || (currentHistogram15m * 1.25m) - previousHistogram15m < 0
+                        || macd15m.Current.Value < macd15m.Signal.Current.Value
+                        || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
+                        || (currentD15m <= 50 && biggestD15mFromOpenPosition is > 53 and < 80)
+                        || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
+                        || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
+                        || currentK15m + 5 < currentD15m
+                        // xauusdData.Close >= pivotIndicator.R1 ||
+                        // xauusdData.Close >= pivotIndicator.R2 ||
+                        // xauusdData.Close >= pivotIndicator.R3 ||
+                        // xauusdData.Close >= pivotIndicator.R4 ||
+                        // xauusdData.Close >= pivotIndicator.R5
+                        // ||
+                        // xauusdData.Close >= pivotIndicator.S1 ||
+                        // xauusdData.Close >= pivotIndicator.S2 ||
+                        // xauusdData.Close >= pivotIndicator.S3 ||
+                        // xauusdData.Close >= pivotIndicator.S4 ||
+                        // xauusdData.Close >= pivotIndicator.S5
                     )
                     {
                         Liquidate(symbolName); // Exit position   
@@ -294,7 +303,6 @@ namespace QuantConnect.Algorithm.CSharp
                 previousHistogram4h = currentHistogram4h; // Update previous value
                 previousK4h = currentK4h; // Update previous value
                 previousD4h = currentD4h; // Update previous value
-
             }
 
         }
