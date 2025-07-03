@@ -58,13 +58,13 @@
       <HintPath>Dlls\MT5Connector.dll</HintPath>
     </Reference>
     <Reference Include="MtApi">
-      <HintPath>..\..\Lean\mtapi\build\products\Debug\net8.0\MtApi.dll</HintPath>
+      <HintPath>..\..\Lean\mtapi\build\products\Release\net8.0\MtApi.dll</HintPath>
     </Reference>
     <Reference Include="MtApi5">
-      <HintPath>..\..\Lean\mtapi\build\products\Debug\net8.0\MtApi5.dll</HintPath>
+      <HintPath>..\..\Lean\mtapi\build\products\Release\net8.0\MtApi5.dll</HintPath>
     </Reference>
     <Reference Include="MtClient">
-      <HintPath>..\..\Lean\mtapi\build\products\Debug\net8.0\MtClient.dll</HintPath>
+      <HintPath>..\..\Lean\mtapi\build\products\Release\net8.0\MtClient.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>Dlls\Newtonsoft.Json.dll</HintPath>

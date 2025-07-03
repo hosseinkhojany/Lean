@@ -22,6 +22,8 @@ namespace QuantConnect.Algorithm.CSharp
         private string symbolName = "XAUUSD";
         private Symbol symbol;
 
+        private MovingAverageConvergenceDivergence macd3m;
+        private StochasticRelativeStrengthIndex  srsi3m;
         private MovingAverageConvergenceDivergence macd15m;
         private StochasticRelativeStrengthIndex  srsi15m;
         private MovingAverageConvergenceDivergence macd4h;
@@ -34,6 +36,9 @@ namespace QuantConnect.Algorithm.CSharp
         private RollingWindow<TradeBar> rollingWindowsCandle15m = new RollingWindow<TradeBar>(200);
         private RollingWindow<TradeBar> rollingWindowsCandle2h = new RollingWindow<TradeBar>(200);
         
+        private decimal? previousHistogram3m = null;
+        private decimal? previousK3m = null;
+        private decimal? previousD3m = null;
         private decimal? previousHistogram15m = null;
         private decimal? previousK15m = null;
         private decimal? previousD15m = null;
@@ -56,8 +61,10 @@ namespace QuantConnect.Algorithm.CSharp
             SetEndDate(2025, 04, 04);
             SetCash(10000);
             
+            Symbols.Add(AddData<AAAMinute3>(symbolName).Symbol);
             Symbols.Add(AddData<AAAMinute15>(symbolName).Symbol);
             Symbols.Add(AddData<AAAHour4>(symbolName).Symbol);
+            // Symbols.Add(AddData<AAAMinute3>(symbolName).Symbol);
             // Symbols.Add(AddData<AAAMinute5>(symbolName).Symbol);
             // Symbols.Add(AddData<AAADaily>(symbolName).Symbol);
 
@@ -69,9 +76,11 @@ namespace QuantConnect.Algorithm.CSharp
             // xauusdSymbolDaily = AddCfd("XAUUSD", Resolution.Daily).Symbol;
             // AddData<AAADaily>(xauusdSymbolDaily);
             
+            srsi3m = new StochasticRelativeStrengthIndex(symbolName,  14, 14, 3, 3);
             srsi15m = new StochasticRelativeStrengthIndex(symbolName,  14, 14, 3, 3);
             srsi4h = new StochasticRelativeStrengthIndex(symbolName,  14, 14, 3, 3);
             
+            macd3m = new MovingAverageConvergenceDivergence(symbolName, 12, 26, 9);
             macd15m = new MovingAverageConvergenceDivergence(symbolName, 12, 26, 9);
             macd15m.Window.Size = 200;
             macd4h = new MovingAverageConvergenceDivergence(symbolName, 12, 26, 9);
@@ -102,7 +111,15 @@ namespace QuantConnect.Algorithm.CSharp
         public override void OnData(Slice data)
         {
             TradeBar xauusdData = new TradeBar();
-            if (data.First().Value is AAAMinute15 minute15)
+            if (data.First().Value is AAAMinute3 aaaMinute3)
+            {
+                xauusdData = aaaMinute3.ToTradeBarWithoutSymbol();
+                macd3m.Update(xauusdData);
+                srsi3m.Update(xauusdData);
+                series[Symbols[0]].Add(xauusdData);
+                Securities[symbol].Update(new List<BaseData> { aaaMinute3.ToTradeBar() }, xauusdData.GetType());
+            }
+            else if (data.First().Value is AAAMinute15 minute15)
             {
                 // var offsetProvider = GetTimeZoneOffsetProvider(symbol);
                 // var now = TimeProvider.GetUtcNow();
@@ -113,7 +130,7 @@ namespace QuantConnect.Algorithm.CSharp
                 srsi15m.Update(xauusdData);
                 pivotIndicator.Update(xauusdData);
                 rollingWindowsCandle15m.Add(xauusdData);
-                series[Symbols[0]].Add(xauusdData);
+                series[Symbols[1]].Add(xauusdData);
                 // Securities[symbol].SetMarketPrice(xauusdData);
                 Securities[symbol].Update(new List<BaseData> { minute15.ToTradeBar() }, xauusdData.GetType());
 
@@ -130,13 +147,8 @@ namespace QuantConnect.Algorithm.CSharp
                 macd4h.Update(xauusdData);
                 srsi4h.Update(xauusdData);
                 rollingWindowsCandle2h.Add(xauusdData);
-                series[Symbols[1]].Add(xauusdData);
-                Securities[symbol].Update(new List<BaseData> { hour.ToTradeBar() }, xauusdData.GetType());
-            }
-            else if (data.First().Value is AAAMinute5 minute5)
-            {
-                xauusdData = minute5.ToTradeBarWithoutSymbol();
                 series[Symbols[2]].Add(xauusdData);
+                Securities[symbol].Update(new List<BaseData> { hour.ToTradeBar() }, xauusdData.GetType());
             }
             else if (data.First().Value is AAADaily daily)
             {
@@ -150,8 +162,12 @@ namespace QuantConnect.Algorithm.CSharp
 
             if (IsWarmingUp) return;
 
-            if (macd15m.IsReady && srsi15m.IsReady && macd4h.IsReady && srsi4h.IsReady)
+            if (macd3m.IsReady && srsi3m.IsReady && macd15m.IsReady && srsi15m.IsReady && macd4h.IsReady && srsi4h.IsReady)
             {
+                decimal currentHistogram3m = macd3m.Histogram.Current.Value;
+                decimal currentK3m = srsi3m.K.Current.Value;
+                decimal currentD3m = srsi3m.D.Current.Value;
+                
                 decimal currentHistogram15m = macd15m.Histogram.Current.Value;
                 decimal currentK15m = srsi15m.K.Current.Value;
                 decimal currentD15m = srsi15m.D.Current.Value;
@@ -193,21 +209,35 @@ namespace QuantConnect.Algorithm.CSharp
                     {
                         biggestK15mFromOpenPosition = filteredWindowK15m.Max(data => data.Value);
                     }
+                    
 
-                    if (
-                            (macd4h.Current.Value > 6 &&
-                            macd4h.Signal.Current.Value > 6 &&
-                            currentHistogram4h > previousHistogram4h &&
-                            currentK4h > 23 &&
-                            currentD4h > 23 &&
-                        currentHistogram15m > 0.8m) 
-                            ||
-                        (currentHistogram4h > -1.6m && currentHistogram15m - previousHistogram15m > 0 &&
+                    bool cons3m = (
+                        macd3m.Current.Value + 0.3m > macd3m.Signal.Current.Value &&
+                        macd3m.Current.Value > 0 &&
+                        macd3m.Signal.Current.Value > 0
+                        );
+                    
+                    bool cons4h = (
+                        macd4h.Current.Value > 6 &&
+                        macd4h.Signal.Current.Value > 6 &&
+                        currentHistogram4h > previousHistogram4h &&
+                        currentK4h > 23 &&
+                        currentD4h > 23 &&
+                        currentHistogram15m > 0.8m
+                        );
+                    
+                    bool mainCons = (
+                        currentHistogram4h > -1.6m &&
+                        currentHistogram15m - previousHistogram15m > 0 &&
                         macd15m.Current.Value > macd15m.Signal.Current.Value &&
                         currentK15m > 51 &&
                         currentD15m > 51 &&
-                        currentK15m > currentD15m
-                        )
+                        currentK15m > currentD15m &&
+                        cons3m
+                        );
+                    
+                    if (
+                        cons4h || mainCons
                     )
                     {
                         if (!Portfolio.Invested)
@@ -297,6 +327,9 @@ namespace QuantConnect.Algorithm.CSharp
                     // //---------------------------------------------SELL
                 }
 
+                previousHistogram3m = currentHistogram3m; // Update previous value
+                previousK3m = currentK3m; // Update previous value
+                previousD3m = currentD3m; // Update previous value
                 previousHistogram15m = currentHistogram15m; // Update previous value
                 previousK15m = currentK15m; // Update previous value
                 previousD15m = currentD15m; // Update previous value
