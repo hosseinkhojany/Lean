@@ -213,8 +213,10 @@ namespace QuantConnect.Algorithm.CSharp
 
                     bool cons3m = (
                         macd3m.Current.Value + 0.3m > macd3m.Signal.Current.Value &&
-                        macd3m.Current.Value > 0 &&
-                        macd3m.Signal.Current.Value > 0
+                        //macd3m.Current.Value > 0 &&
+                        //macd3m.Signal.Current.Value > 0 &&
+                        currentK3m > currentD3m &&
+                        currentHistogram3m > -0.32m
                         );
                     
                     bool cons4h = (
@@ -228,10 +230,10 @@ namespace QuantConnect.Algorithm.CSharp
                     
                     bool mainCons = (
                         currentHistogram4h > -1.6m &&
-                        currentHistogram15m - previousHistogram15m > 0 &&
-                        macd15m.Current.Value > macd15m.Signal.Current.Value &&
-                        currentK15m > 51 &&
-                        currentD15m > 51 &&
+                        currentHistogram15m > previousHistogram15m &&
+                        macd15m.Current.Value + 0.3m > macd15m.Signal.Current.Value &&
+                        currentK15m > 23 &&
+                        currentD15m > 23 &&
                         currentK15m > currentD15m &&
                         cons3m
                         );
