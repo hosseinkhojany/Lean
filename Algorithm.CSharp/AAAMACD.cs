@@ -23,19 +23,30 @@ namespace QuantConnect.Algorithm.CSharp
         private Symbol symbol;
 
         private MovingAverageConvergenceDivergence macd3m;
-        private StochasticRelativeStrengthIndex  srsi3m;
+        private StochasticRelativeStrengthIndex srsi3m;
         private MovingAverageConvergenceDivergence macd15m;
-        private StochasticRelativeStrengthIndex  srsi15m;
+        private StochasticRelativeStrengthIndex srsi15m;
         private MovingAverageConvergenceDivergence macd4h;
-        private StochasticRelativeStrengthIndex  srsi4h;
-        
+        private StochasticRelativeStrengthIndex srsi4h;
+
         private AAAPivotPointStandardIndicator pivotIndicator;
-        
+
         private int _lookbackPeriod = 3;
         private decimal _minimumGapSize = 0.001m;
         private RollingWindow<TradeBar> rollingWindowsCandle15m = new RollingWindow<TradeBar>(200);
         private RollingWindow<TradeBar> rollingWindowsCandle2h = new RollingWindow<TradeBar>(200);
-        
+
+
+        private decimal? previousmacdcload4h = null;
+        private int counterMacdCloud4h = 0;
+
+        private decimal? previousmacdcload15m = null;
+        private int counterMacdCloud15m = 0;
+
+        private decimal? previousmacdcload3m = null;
+        private int counterMacdCloud3m = 0;
+
+
         private decimal? previousHistogram3m = null;
         private decimal? previousK3m = null;
         private decimal? previousD3m = null;
@@ -50,7 +61,7 @@ namespace QuantConnect.Algorithm.CSharp
         private TradeBar first15MinuteCandleOfStartOfDay;
         private OrderTicket orderTicket;
         private bool marketOpen15MinuteTimeCheck;
-        
+
         private MarketHoursDatabase _marketHoursDatabase;
         private ConcurrentDictionary<Symbol, TimeZoneOffsetProvider> _symbolExchangeTimeZones = new();
         protected virtual ITimeProvider TimeProvider { get; } = RealTimeProvider.Instance;
@@ -60,7 +71,7 @@ namespace QuantConnect.Algorithm.CSharp
             SetStartDate(2025, 01, 01);
             SetEndDate(2025, 04, 04);
             SetCash(10000);
-            
+
             Symbols.Add(AddData<AAAMinute3>(symbolName).Symbol);
             Symbols.Add(AddData<AAAMinute15>(symbolName).Symbol);
             Symbols.Add(AddData<AAAHour4>(symbolName).Symbol);
@@ -70,16 +81,16 @@ namespace QuantConnect.Algorithm.CSharp
 
             symbol = AddCfd(symbolName).Symbol;
             // symbol = AddForex(symbolName).Symbol;
-            
+
             // AddData<AAAMinute15>(xauusdSymbolMinute5);
 
             // xauusdSymbolDaily = AddCfd("XAUUSD", Resolution.Daily).Symbol;
             // AddData<AAADaily>(xauusdSymbolDaily);
-            
-            srsi3m = new StochasticRelativeStrengthIndex(symbolName,  14, 14, 3, 3);
-            srsi15m = new StochasticRelativeStrengthIndex(symbolName,  14, 14, 3, 3);
-            srsi4h = new StochasticRelativeStrengthIndex(symbolName,  14, 14, 3, 3);
-            
+
+            srsi3m = new StochasticRelativeStrengthIndex(symbolName, 14, 14, 3, 3);
+            srsi15m = new StochasticRelativeStrengthIndex(symbolName, 14, 14, 3, 3);
+            srsi4h = new StochasticRelativeStrengthIndex(symbolName, 14, 14, 3, 3);
+
             macd3m = new MovingAverageConvergenceDivergence(symbolName, 12, 26, 9);
             macd15m = new MovingAverageConvergenceDivergence(symbolName, 12, 26, 9);
             macd15m.Window.Size = 200;
@@ -167,14 +178,25 @@ namespace QuantConnect.Algorithm.CSharp
                 decimal currentHistogram3m = macd3m.Histogram.Current.Value;
                 decimal currentK3m = srsi3m.K.Current.Value;
                 decimal currentD3m = srsi3m.D.Current.Value;
-                
+                decimal curentmacdcload3m = macd3m.Current.Value - macd3m.Signal.Current.Value;
+
                 decimal currentHistogram15m = macd15m.Histogram.Current.Value;
                 decimal currentK15m = srsi15m.K.Current.Value;
                 decimal currentD15m = srsi15m.D.Current.Value;
+                decimal curentmacdcload15m = macd15m.Current.Value - macd15m.Signal.Current.Value;
 
                 decimal currentHistogram4h = macd4h.Histogram.Current.Value;
                 decimal currentK4h = srsi4h.K.Current.Value;
                 decimal currentD4h = srsi4h.D.Current.Value;
+                decimal curentmacdcload4h = macd4h.Current.Value - macd4h.Signal.Current.Value;
+
+                if (curentmacdcload4h < previousmacdcload4h)
+                {
+                    counterMacdCloud4h++;
+                }
+                else {
+                    counterMacdCloud4h = 0;
+                }
 
                 if (previousHistogram15m.HasValue && previousHistogram4h.HasValue)
                 {
@@ -185,7 +207,7 @@ namespace QuantConnect.Algorithm.CSharp
                         xauusdData.Time.Month == targetDate.Month &&
                         xauusdData.Time.Day == targetDate.Day &&
                         xauusdData.Time.Hour == targetDate.Hour
-                        // && xauusdData.Time.Minute == targetDate.Minute
+                    // && xauusdData.Time.Minute == targetDate.Minute
                     )
                     {
                         Console.WriteLine("");
@@ -209,7 +231,7 @@ namespace QuantConnect.Algorithm.CSharp
                     {
                         biggestK15mFromOpenPosition = filteredWindowK15m.Max(data => data.Value);
                     }
-                    
+
 
                     bool cons3m = (
                         macd3m.Current.Value + 0.3m > macd3m.Signal.Current.Value &&
@@ -218,7 +240,7 @@ namespace QuantConnect.Algorithm.CSharp
                         currentK3m > currentD3m &&
                         currentHistogram3m > -0.32m
                         );
-                    
+
                     bool cons4h = (
                         macd4h.Current.Value > 6 &&
                         macd4h.Signal.Current.Value > 6 &&
@@ -227,7 +249,7 @@ namespace QuantConnect.Algorithm.CSharp
                         currentD4h > 23 &&
                         currentHistogram15m > 0.8m
                         );
-                    
+
                     bool mainCons = (
                         currentHistogram4h > -1.6m &&
                         currentHistogram15m > previousHistogram15m &&
@@ -237,7 +259,7 @@ namespace QuantConnect.Algorithm.CSharp
                         currentK15m > currentD15m &&
                         cons3m
                         );
-                    
+
                     if (
                         cons4h || mainCons
                     )
@@ -253,6 +275,7 @@ namespace QuantConnect.Algorithm.CSharp
                     }
                     else if (
                         currentHistogram15m < 0
+                        || (counterMacdCloud4h == 2)
                         || (currentHistogram15m * 1.25m) - previousHistogram15m < 0
                         || macd15m.Current.Value < macd15m.Signal.Current.Value
                         || (currentK15m <= 50 && biggestK15mFromOpenPosition is > 53 and < 80)
@@ -260,17 +283,17 @@ namespace QuantConnect.Algorithm.CSharp
                         || (currentK15m <= 80 && biggestK15mFromOpenPosition is >= 80 and <= 100)
                         || (currentD15m <= 80 && biggestD15mFromOpenPosition is >= 80 and <= 100)
                         || currentK15m + 5 < currentD15m
-                        // xauusdData.Close >= pivotIndicator.R1 ||
-                        // xauusdData.Close >= pivotIndicator.R2 ||
-                        // xauusdData.Close >= pivotIndicator.R3 ||
-                        // xauusdData.Close >= pivotIndicator.R4 ||
-                        // xauusdData.Close >= pivotIndicator.R5
-                        // ||
-                        // xauusdData.Close >= pivotIndicator.S1 ||
-                        // xauusdData.Close >= pivotIndicator.S2 ||
-                        // xauusdData.Close >= pivotIndicator.S3 ||
-                        // xauusdData.Close >= pivotIndicator.S4 ||
-                        // xauusdData.Close >= pivotIndicator.S5
+                    // xauusdData.Close >= pivotIndicator.R1 ||
+                    // xauusdData.Close >= pivotIndicator.R2 ||
+                    // xauusdData.Close >= pivotIndicator.R3 ||
+                    // xauusdData.Close >= pivotIndicator.R4 ||
+                    // xauusdData.Close >= pivotIndicator.R5
+                    // ||
+                    // xauusdData.Close >= pivotIndicator.S1 ||
+                    // xauusdData.Close >= pivotIndicator.S2 ||
+                    // xauusdData.Close >= pivotIndicator.S3 ||
+                    // xauusdData.Close >= pivotIndicator.S4 ||
+                    // xauusdData.Close >= pivotIndicator.S5
                     )
                     {
                         Liquidate(symbolName); // Exit position   
@@ -330,12 +353,15 @@ namespace QuantConnect.Algorithm.CSharp
                 }
 
                 previousHistogram3m = currentHistogram3m; // Update previous value
+                previousmacdcload3m = curentmacdcload3m; // Update previous value
                 previousK3m = currentK3m; // Update previous value
                 previousD3m = currentD3m; // Update previous value
                 previousHistogram15m = currentHistogram15m; // Update previous value
+                previousmacdcload15m = curentmacdcload15m; // Update previous value
                 previousK15m = currentK15m; // Update previous value
                 previousD15m = currentD15m; // Update previous value
                 previousHistogram4h = currentHistogram4h; // Update previous value
+                previousmacdcload4h = curentmacdcload4h; // Update previous value
                 previousK4h = currentK4h; // Update previous value
                 previousD4h = currentD4h; // Update previous value
             }
@@ -361,12 +387,12 @@ namespace QuantConnect.Algorithm.CSharp
             Console.WriteLine(
                 "SRSI 15m: " + srsi15m.Current.Value +
                 ", K 15m: " + srsi15m.K.Current.Value +
-                ", D 15m: " + srsi15m.D.Current.Value 
+                ", D 15m: " + srsi15m.D.Current.Value
             );
             Console.WriteLine(
                 "SRSI 4h: " + srsi4h.Current.Value +
                 ", K 4h: " + srsi4h.K.Current.Value +
-                ", D 4h: " + srsi4h.D.Current.Value 
+                ", D 4h: " + srsi4h.D.Current.Value
             );
         }
 
@@ -382,7 +408,7 @@ namespace QuantConnect.Algorithm.CSharp
 
         public override void OnEndOfAlgorithm()
         {
-            AAAChartLauncher.Launch(series, Symbols, Statistics,false);
+            AAAChartLauncher.Launch(series, Symbols, Statistics, false);
         }
 
         public bool CanRunLocally { get; } = true;
@@ -436,7 +462,7 @@ namespace QuantConnect.Algorithm.CSharp
             {"Portfolio Turnover", "0.83%"},
             {"OrderListHash", "d38318f2dd0a38f11ef4e4fd704706a7"}
         };
-        
+
         private TimeZoneOffsetProvider GetTimeZoneOffsetProvider(Symbol symbol)
         {
             return _symbolExchangeTimeZones.GetOrAdd(symbol, s =>
