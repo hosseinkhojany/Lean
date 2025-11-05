@@ -281,6 +281,8 @@ Research/Notebooks
 #Docker result files
 MODULES/
 Results/
+QuantConnect.Lean.sln.DotSettings
+
 MtProxyUI/
 mtapi/
 QuantConnect.MetaTrader.ToolBox/

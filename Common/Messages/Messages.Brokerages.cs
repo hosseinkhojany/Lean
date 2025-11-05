@@ -23,6 +23,7 @@ using static QuantConnect.StringExtensions;
 using System.Collections.Generic;
 using QuantConnect.Orders.TimeInForces;
 using System.Globalization;
+using QuantConnect.Data.UniverseSelection;
 
 namespace QuantConnect
 {
@@ -145,6 +146,24 @@ namespace QuantConnect
             public static string UnsupportedUpdateQuantityOrder(IBrokerageModel brokerageModel, OrderType orderType)
             {
                 return Invariant($"Order type '{orderType}' is not supported to update quantity in the {brokerageModel.GetType().Name}.");
+            }
+
+            /// <summary>
+            /// Builds a descriptive error message when a <see cref="OrderType.MarketOnOpen"/> 
+            /// order is submitted outside the valid submission window.
+            /// </summary>
+            /// <param name="windowStart">The start of the valid submission window (typically evening of the prior day).</param>
+            /// <param name="windowEnd">The end of the valid submission window (typically morning of the next day).</param>
+            /// <returns>
+            /// A formatted string describing why the order is not valid at the current time,
+            /// including the allowed submission window and suggested fixes.
+            /// </returns>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static string UnsupportedMarketOnOpenOrderTime(
+                in TimeOnly windowStart,
+                in TimeOnly windowEnd)
+            {
+                return Invariant($"MarketOnOpen submission time is invalid. Valid local times are {windowStart: hh\\:mm}–{windowEnd: hh\\:mm}. Consider setting DailyPreciseEndTime = false or using {nameof(Schedule)}.{nameof(Schedule.On)}.");
             }
         }
 
@@ -412,6 +431,22 @@ namespace QuantConnect
             public static string StopMarketOrdersNoLongerSupported(DateTime stopMarketOrderSupportEndDate)
             {
                 return Invariant($"Stop Market orders are no longer supported since {stopMarketOrderSupportEndDate}.");
+            }
+        }
+
+        /// <summary>
+        /// Provides user-facing messages for the <see cref="Brokerages.InteractiveBrokersFixModel"/> class and its consumers or related classes
+        /// </summary>
+        public static class InteractiveBrokersFixModel
+        {
+            /// <summary>
+            /// Returns a string message saying the given brokerage model does not support order exercises
+            /// for index and cash-settled options
+            /// </summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static string UnsupportedComboOrdersForFutureOptions(Brokerages.InteractiveBrokersFixModel brokerageModel, Orders.Order order)
+            {
+                return Invariant($@"The {brokerageModel.GetType().Name} does not support {order.Type} for future options.");
             }
         }
 

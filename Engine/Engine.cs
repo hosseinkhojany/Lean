@@ -104,6 +104,7 @@ namespace QuantConnect.Lean.Engine
 
                 IBrokerage brokerage = null;
                 DataManager dataManager = null;
+                var performanceTrackingTool = new PerformanceTrackingTool();
                 var synchronizer = _liveMode ? new LiveSynchronizer() : new Synchronizer();
                 try
                 {
@@ -122,7 +123,7 @@ namespace QuantConnect.Lean.Engine
                     SystemHandlers.LeanManager.SetAlgorithm(algorithm);
 
                     // initialize the object store
-                    AlgorithmHandlers.ObjectStore.Initialize(job.UserId, job.ProjectId, job.UserToken, job.Controls);
+                    AlgorithmHandlers.ObjectStore.Initialize(job.UserId, job.ProjectId, job.UserToken, job.Controls, algorithm.AlgorithmMode);
 
                     // initialize the data permission manager
                     AlgorithmHandlers.DataPermissionsManager.Initialize(job);
@@ -169,7 +170,7 @@ namespace QuantConnect.Lean.Engine
 
                     algorithm.SubscriptionManager.SetDataManager(dataManager);
 
-                    synchronizer.Initialize(algorithm, dataManager);
+                    synchronizer.Initialize(algorithm, dataManager, performanceTrackingTool);
 
                     // Set the algorithm's object store before initializing the data feed, which might use it
                     algorithm.SetObjectStore(AlgorithmHandlers.ObjectStore);
@@ -224,26 +225,33 @@ namespace QuantConnect.Lean.Engine
                     // initialize the default brokerage message handler
                     algorithm.BrokerageMessageHandler = factory.CreateBrokerageMessageHandler(algorithm, job, SystemHandlers.Api);
 
-                    // wire up the brokerage message handler
-                    brokerage.Message += (sender, message) =>
+                    var brokerageDataQueueHandlers = Composer.Instance.GetParts<IDataQueueHandler>().OfType<IBrokerage>()
+                        // In backtesting, brokerages can be used as data downloaders (BrokerageDataDownloader)
+                        // and are added to the composer as IBrokerage
+                        .Concat(Composer.Instance.GetParts<IBrokerage>())
+                        .Where(x => !ReferenceEquals(brokerage, x));
+                    foreach (var x in new[] { brokerage }.Concat(brokerageDataQueueHandlers))
                     {
-                        algorithm.BrokerageMessageHandler.HandleMessage(message);
-
-                        if (algorithm.GetLocked())
+                        x.Message += (sender, message) =>
                         {
-                            // fire brokerage message events
-                            algorithm.OnBrokerageMessage(message);
-                            switch (message.Type)
+                            algorithm.BrokerageMessageHandler.HandleMessage(message);
+
+                            if (algorithm.GetLocked())
                             {
-                                case BrokerageMessageType.Disconnect:
-                                    algorithm.OnBrokerageDisconnect();
-                                    break;
-                                case BrokerageMessageType.Reconnect:
-                                    algorithm.OnBrokerageReconnect();
-                                    break;
+                                // fire brokerage message events
+                                algorithm.OnBrokerageMessage(message);
+                                switch (message.Type)
+                                {
+                                    case BrokerageMessageType.Disconnect:
+                                        algorithm.OnBrokerageDisconnect();
+                                        break;
+                                    case BrokerageMessageType.Reconnect:
+                                        algorithm.OnBrokerageReconnect();
+                                        break;
+                                }
                             }
-                        }
-                    };
+                        };
+                    }
 
                     //Initialize the internal state of algorithm and job: executes the algorithm.Initialize() method.
                     initializeComplete = AlgorithmHandlers.Setup.Setup(new SetupHandlerParameters(dataManager.UniverseSelection, algorithm,
@@ -307,6 +315,7 @@ namespace QuantConnect.Lean.Engine
                 //-> Using the job + initialization: load the designated handlers:
                 if (initializeComplete)
                 {
+                    performanceTrackingTool.Initialize(algorithm);
                     // notify the LEAN manager that the algorithm is initialized and starting
                     SystemHandlers.LeanManager.OnAlgorithmStart();
 
@@ -339,7 +348,7 @@ namespace QuantConnect.Lean.Engine
                                 // -> Using this Data Feed,
                                 // -> Send Orders to this TransactionHandler,
                                 // -> Send Results to ResultHandler.
-                                algorithmManager.Run(job, algorithm, synchronizer, AlgorithmHandlers.Transactions, AlgorithmHandlers.Results, AlgorithmHandlers.RealTime, SystemHandlers.LeanManager, isolator.CancellationTokenSource);
+                                algorithmManager.Run(job, algorithm, synchronizer, AlgorithmHandlers.Transactions, AlgorithmHandlers.Results, AlgorithmHandlers.RealTime, SystemHandlers.LeanManager, isolator.CancellationTokenSource, performanceTrackingTool);
                             }
                             catch (Exception err)
                             {

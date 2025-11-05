@@ -24,6 +24,7 @@ using Python.Runtime;
 using QuantConnect.Util;
 using static QuantConnect.StringExtensions;
 using QuantConnect.Data.Common;
+using QuantConnect.Python;
 
 namespace QuantConnect.Algorithm
 {
@@ -40,6 +41,19 @@ namespace QuantConnect.Algorithm
             Field.AskOpen,
             Field.AskLow,
             Field.AskHigh,
+        };
+
+        private static readonly HashSet<string> _ignoredProperties = new HashSet<string>
+        {
+            "Consolidators",
+            "Current",
+            "Previous",
+            "Name",
+            "Samples",
+            "IsReady",
+            "Window",
+            "Item",
+            "WarmUpPeriod"
         };
 
         /// <summary>
@@ -176,8 +190,27 @@ namespace QuantConnect.Algorithm
         public AutoRegressiveIntegratedMovingAverage ARIMA(Symbol symbol, int arOrder, int diffOrder, int maOrder, int period,
             Resolution? resolution = null, Func<IBaseData, decimal> selector = null)
         {
+            return ARIMA(symbol, arOrder, diffOrder, maOrder, period, true, resolution, selector);
+        }
+
+        /// <summary>
+        /// Creates a new ARIMA indicator.
+        /// </summary>
+        /// <param name="symbol">The symbol whose ARIMA indicator we want</param>
+        /// <param name="arOrder">AR order (p) -- defines the number of past values to consider in the AR component of the model.</param>
+        /// <param name="diffOrder">Difference order (d) -- defines how many times to difference the model before fitting parameters.</param>
+        /// <param name="maOrder">MA order (q) -- defines the number of past values to consider in the MA component of the model.</param>
+        /// <param name="period">Size of the rolling series to fit onto</param>
+        /// <param name="intercept">Whether or not to include the intercept term</param>
+        /// <param name="resolution">The resolution</param>
+        /// <param name="selector">Selects a value from the BaseData to send into the indicator, if null defaults to the Value property of BaseData (x => x.Value)</param>
+        /// <returns>The ARIMA indicator for the requested symbol over the specified period</returns>
+        [DocumentationAttribute(Indicators)]
+        public AutoRegressiveIntegratedMovingAverage ARIMA(Symbol symbol, int arOrder, int diffOrder, int maOrder, int period, bool intercept,
+            Resolution? resolution = null, Func<IBaseData, decimal> selector = null)
+        {
             var name = CreateIndicatorName(symbol, $"ARIMA({arOrder},{diffOrder},{maOrder},{period})", resolution);
-            var arimaIndicator = new AutoRegressiveIntegratedMovingAverage(name, arOrder, diffOrder, maOrder, period);
+            var arimaIndicator = new AutoRegressiveIntegratedMovingAverage(name, arOrder, diffOrder, maOrder, period, intercept);
             InitializeIndicator(arimaIndicator, resolution, selector, symbol);
 
             return arimaIndicator;
@@ -638,7 +671,7 @@ namespace QuantConnect.Algorithm
         /// <param name="symbol">The symbol whose Donchian Channel we seek.</param>
         /// <param name="period">The period over which to compute the Donchian Channel.</param>
         /// <param name="resolution">The resolution.</param>
-        /// <param name="selector">Selects a value from the BaseData to send into the indicator, if null defaults to casting the input value to a TradeBar</param>
+        /// <param name="selector">Selects a value from the BaseData to send into the indicator, if null defaults to casting the input value to a IBaseDataBar</param>
         /// <returns>The Donchian Channel indicator for the requested symbol.</returns>
         [DocumentationAttribute(Indicators)]
         public DonchianChannel DCH(Symbol symbol, int period, Resolution? resolution = null, Func<IBaseData, IBaseDataBar> selector = null)
@@ -1402,7 +1435,7 @@ namespace QuantConnect.Algorithm
         [DocumentationAttribute(Indicators)]
         public VolumeProfile VP(Symbol symbol, int period = 2, decimal valueAreaVolumePercentage = 0.70m, decimal priceRangeRoundOff = 0.05m, Resolution resolution = Resolution.Daily, Func<IBaseData, TradeBar> selector = null)
         {
-            var name = CreateIndicatorName(symbol, $"VP({period})", resolution);
+            var name = CreateIndicatorName(symbol, $"VP({period},{valueAreaVolumePercentage},{priceRangeRoundOff})", resolution);
             var marketProfile = new VolumeProfile(name, period, valueAreaVolumePercentage, priceRangeRoundOff);
             InitializeIndicator(marketProfile, resolution, selector, symbol);
 
@@ -1423,7 +1456,7 @@ namespace QuantConnect.Algorithm
         [DocumentationAttribute(Indicators)]
         public TimeProfile TP(Symbol symbol, int period = 2, decimal valueAreaVolumePercentage = 0.70m, decimal priceRangeRoundOff = 0.05m, Resolution resolution = Resolution.Daily, Func<IBaseData, TradeBar> selector = null)
         {
-            var name = CreateIndicatorName(symbol, $"TP({period})", resolution);
+            var name = CreateIndicatorName(symbol, $"TP({period},{valueAreaVolumePercentage},{priceRangeRoundOff})", resolution);
             var marketProfile = new TimeProfile(name, period, valueAreaVolumePercentage, priceRangeRoundOff);
             InitializeIndicator(marketProfile, resolution, selector, symbol);
 
@@ -1612,10 +1645,10 @@ namespace QuantConnect.Algorithm
         /// <param name="selector">Selects a value from the BaseData to send into the indicator, if null defaults to the Value property of BaseData (x => x.Value)</param>
         /// <returns>The Momersion indicator for the requested symbol over the specified period</returns>
         [DocumentationAttribute(Indicators)]
-        public MomersionIndicator MOMERSION(Symbol symbol, int? minPeriod, int fullPeriod, Resolution? resolution = null, Func<IBaseData, decimal> selector = null)
+        public Momersion MOMERSION(Symbol symbol, int? minPeriod, int fullPeriod, Resolution? resolution = null, Func<IBaseData, decimal> selector = null)
         {
             var name = CreateIndicatorName(symbol, $"MOMERSION({minPeriod},{fullPeriod})", resolution);
-            var momersion = new MomersionIndicator(name, minPeriod, fullPeriod);
+            var momersion = new Momersion(name, minPeriod, fullPeriod);
             InitializeIndicator(momersion, resolution, selector, symbol);
 
             return momersion;
@@ -1678,7 +1711,7 @@ namespace QuantConnect.Algorithm
         }
 
         /// <summary>
-        /// Creates a new PivotPointsHighLow indicator
+        /// Creates a new PivotPointsHighLow indicator which will compute the high and low pivot points based on the configurable surrounding bars count.
         /// </summary>
         /// <param name="symbol">The symbol whose PPHL we seek</param>
         /// <param name="lengthHigh">The number of surrounding bars whose high values should be less than the current bar's for the bar high to be marked as high pivot point</param>
@@ -1688,10 +1721,27 @@ namespace QuantConnect.Algorithm
         /// <param name="selector">Selects a value from the BaseData to send into the indicator, if null defaults to casting the input value to a TradeBar</param>
         /// <returns>The PivotPointsHighLow indicator for the requested symbol.</returns>
         [DocumentationAttribute(Indicators)]
-        public PivotPointsHighLow PPHL(Symbol symbol, int lengthHigh, int lengthLow, int lastStoredValues = 100, Resolution? resolution = null, Func<IBaseData, IBaseDataBar> selector = null)
+        public PivotPointsHighLow PPHL(Symbol symbol, int lengthHigh, int lengthLow, int lastStoredValues, Resolution? resolution, Func<IBaseData, IBaseDataBar> selector = null)
+        {
+            return PPHL(symbol, lengthHigh, lengthLow, lastStoredValues, strict: true, resolution, selector);
+        }
+
+        /// <summary>
+        /// Creates a new PivotPointsHighLow indicator which will compute the high and low pivot points based on the configurable surrounding bars count.
+        /// </summary>
+        /// <param name="symbol">The symbol whose PPHL we seek</param>
+        /// <param name="lengthHigh">The number of surrounding bars whose high values should be less than the current bar's for the bar high to be marked as high pivot point</param>
+        /// <param name="lengthLow">The number of surrounding bars whose low values should be more than the current bar's for the bar low to be marked as low pivot point</param>
+        /// <param name="lastStoredValues">The number of last stored indicator values</param>
+        /// <param name="strict">When true (default), uses strict inequalities (greater than and less than). When false, uses relaxed inequalities (greater than or equal and less than or equal) allowing equal values to be detected as pivot points.</param>
+        /// <param name="resolution">The resolution</param>
+        /// <param name="selector">Selects a value from the BaseData to send into the indicator, if null defaults to casting the input value to a TradeBar</param>
+        /// <returns>The PivotPointsHighLow indicator for the requested symbol.</returns>
+        [DocumentationAttribute(Indicators)]
+        public PivotPointsHighLow PPHL(Symbol symbol, int lengthHigh, int lengthLow, int lastStoredValues = 100, bool strict = true, Resolution? resolution = null, Func<IBaseData, IBaseDataBar> selector = null)
         {
             var name = CreateIndicatorName(symbol, $"PPHL({lengthHigh},{lengthLow})", resolution);
-            var pivotPointsHighLow = new PivotPointsHighLow(name, lengthHigh, lengthLow, lastStoredValues);
+            var pivotPointsHighLow = new PivotPointsHighLow(name, lengthHigh, lengthLow, lastStoredValues, strict);
             InitializeIndicator(pivotPointsHighLow, resolution, selector, symbol);
 
             return pivotPointsHighLow;
@@ -2020,6 +2070,33 @@ namespace QuantConnect.Algorithm
         }
 
         /// <summary>
+        /// Creates a new Parabolic SAR Extended indicator
+        /// </summary>
+        /// <param name="symbol">The symbol whose SAREXT we seek</param>
+        /// <param name="sarStart">The starting value for the Stop and Reverse indicator</param>
+        /// <param name="offsetOnReverse">The offset value to be applied on reverse </param>
+        /// <param name="afStartShort">The starting acceleration factor for short positions</param>
+        /// <param name="afIncrementShort">The increment value for the acceleration factor for short positions</param>
+        /// <param name="afMaxShort">The maximum value for the acceleration factor for short positions</param>
+        /// <param name="afStartLong">The starting acceleration factor for long positions</param>
+        /// <param name="afIncrementLong">The increment value for the acceleration factor for long positions</param>
+        /// <param name="afMaxLong">The maximum value for the acceleration factor for long positions</param>
+        /// <param name="resolution">The resolution</param>
+        /// <param name="selector">Selects a value from the BaseData to send into the indicator, if null defaults to casting the input value to a TradeBar</param>
+        /// <returns>A ParabolicStopAndReverseExtended configured with the specified periods</returns>
+        [DocumentationAttribute(Indicators)]
+        public ParabolicStopAndReverseExtended SAREXT(Symbol symbol, decimal sarStart = 0.0m, decimal offsetOnReverse = 0.0m, decimal afStartShort = 0.02m,
+            decimal afIncrementShort = 0.02m, decimal afMaxShort = 0.2m, decimal afStartLong = 0.02m, decimal afIncrementLong = 0.02m, decimal afMaxLong = 0.2m,
+            Resolution? resolution = null, Func<IBaseData, IBaseDataBar> selector = null)
+        {
+            var name = CreateIndicatorName(symbol, $"SAREXT({sarStart},{offsetOnReverse},{afStartShort},{afIncrementShort},{afMaxShort},{afStartLong},{afIncrementLong},{afMaxLong})", resolution);
+            var parabolicStopAndReverseExtended = new ParabolicStopAndReverseExtended(name, sarStart, offsetOnReverse, afStartShort, afIncrementShort, afMaxShort, afStartLong, afIncrementLong, afMaxLong);
+            InitializeIndicator(parabolicStopAndReverseExtended, resolution, selector, symbol);
+
+            return parabolicStopAndReverseExtended;
+        }
+
+        /// <summary>
         /// Creates a Squeeze Momentum indicator to identify market squeezes and potential breakouts.
         /// Compares Bollinger Bands and Keltner Channels to signal low or high volatility periods.
         /// </summary>
@@ -2137,6 +2214,22 @@ namespace QuantConnect.Algorithm
             InitializeIndicator(targetDownsideDeviation, resolution, selector, symbol);
 
             return targetDownsideDeviation;
+        }
+        
+        /// <summary>
+        /// Creates a new TomDemark Sequential candlestick indicator for the symbol. The indicator will be automatically
+        /// updated on the symbol's subscription resolution.
+        /// </summary>
+        /// <param name="symbol">The symbol whose TomDemark Sequential we want</param>
+        /// <param name="resolution">The resolution</param>
+        /// <param name="selector">Selects a value from the BaseData to send into the indicator, if null defaults to casting the input value to a IBaseDataBar</param>
+        /// <returns>The TomDemark Sequential indicator for the requested symbol over the specified period</returns>
+        public TomDemarkSequential TDS(Symbol symbol, Resolution? resolution = null, Func<IBaseData, IBaseDataBar> selector = null)
+        {
+            var name = CreateIndicatorName(symbol, "TDS", resolution);
+            var tdSequential = new TomDemarkSequential(name);
+            InitializeIndicator(tdSequential, resolution, selector, symbol);
+            return tdSequential;
         }
 
         /// <summary>
@@ -3967,6 +4060,82 @@ namespace QuantConnect.Algorithm
             return consolidator;
         }
 
+        /// <summary>
+        /// Registers a Renko or VolumeRenko consolidator for the specified symbol and bar size,
+        /// and subscribes the <paramref name="handler"/> to receive consolidated data.
+        /// </summary>
+        /// <param name="symbol">The symbol whose data is to be consolidated</param>
+        /// <param name="size">The bar size used for consolidation</param>
+        /// <param name="tickType">The tick type of the data to be consolidated</param>
+        /// <param name="handler">Handler to receive consolidated data</param>
+        /// <returns>A new Renko-based consolidator with the handler registered</returns>
+        public IDataConsolidator Consolidate<T>(Symbol symbol, decimal size, TickType? tickType, Action<T> handler)
+            where T : class, IBaseData
+        {
+            var consolidator = CreateConsolidator(symbol, size, typeof(T), tickType);
+            if (handler != null)
+            {
+                // register user-defined handler to receive consolidated data events
+                consolidator.DataConsolidated += (sender, consolidated) => handler((T)consolidated);
+
+                // register the consolidator for automatic updates via SubscriptionManager
+                RegisterConsolidator(symbol, consolidator, tickType, indicatorBase: null);
+            }
+            return consolidator;
+        }
+
+        private IDataConsolidator CreateConsolidator(Symbol symbol, decimal size, Type consolidatorType, TickType? tickType)
+        {
+            var subscription = GetSubscription(symbol);
+
+            // Select consolidator based on the consolidator type
+            // size attribute will be used as barSize or range
+            if (consolidatorType == typeof(VolumeRenkoBar))
+            {
+                return new VolumeRenkoConsolidator(size);
+            }
+
+            if (consolidatorType == typeof(RenkoBar))
+            {
+                return new RenkoConsolidator(size);
+            }
+
+            if (consolidatorType == typeof(RangeBar))
+            {
+                return new RangeConsolidator((int)size);
+            }
+
+            // size attribute will be used as maxCount
+            // If the subscription uses Tick resolution, choose the consolidator based on TickType
+            if (subscription.Resolution == Resolution.Tick)
+            {
+                switch (tickType)
+                {
+                    case TickType.OpenInterest:
+                        return new OpenInterestConsolidator((int)size);
+
+                    case TickType.Quote:
+                        return new TickQuoteBarConsolidator((int)size);
+
+                    default:
+                        return new TickConsolidator((int)size);
+                }
+            }
+
+            if (consolidatorType == typeof(TradeBar))
+            {
+                return new TradeBarConsolidator((int)size);
+            }
+
+            if (consolidatorType == typeof(QuoteBar))
+            {
+                return new QuoteBarConsolidator((int)size);
+            }
+
+            // no matter what, we can always consolidate using BaseData with a maxCount
+            return new BaseDataConsolidator((int)size);
+        }
+
         private IDataConsolidator CreateConsolidator(Symbol symbol, Func<DateTime, CalendarInfo> calendar, TickType? tickType, TimeSpan? period, Resolution? resolution, Type consolidatorType)
         {
             // resolve consolidator input subscription
@@ -4207,14 +4376,21 @@ namespace QuantConnect.Algorithm
             // Reset the indicator
             indicator.Reset();
 
-            var indicatorType = indicator.GetType();
-            // Create a dictionary of the indicator properties & the indicator value itself
-            var indicatorsDataPointPerProperty = indicatorType.GetProperties()
-                .Where(x => x.PropertyType.IsGenericType && x.Name != "Consolidators" && x.Name != "Window")
-                .Select(x => InternalIndicatorValues.Create(indicator, x))
-                .Concat(new[] { InternalIndicatorValues.Create(indicator, "Current") })
+            var properties = indicator.GetType()
+                .GetProperties()
+                .Where(p => !p.IsDefined(typeof(PandasIgnoreAttribute), true) &&
+                            !_ignoredProperties.Contains(p.Name))
+                .ToLookup(p => typeof(IIndicator).IsAssignableFrom(p.PropertyType));
+
+            var indicatorProperties = properties[true];
+            var nonIndicatorProperties = properties[false];
+
+            var indicatorsDataPointPerProperty = indicatorProperties
+                .Select(p => InternalIndicatorValues.Create(indicator, p))
+                .Append(InternalIndicatorValues.Create(indicator, "Current"))
                 .ToList();
 
+            var nonIndicatorValues = new Dictionary<string, List<(DateTime, object)>>();
             var indicatorsDataPointsByTime = new List<IndicatorDataPoints>();
             var lastConsumedTime = DateTime.MinValue;
             IndicatorDataPoint lastPoint = null;
@@ -4232,6 +4408,20 @@ namespace QuantConnect.Algorithm
                 {
                     var newPoint = indicatorsDataPointPerProperty[i].UpdateValue();
                     IndicatorDataPoints.SetProperty(indicatorsDataPointPerProperty[i].Name, newPoint);
+                }
+
+                foreach (var property in nonIndicatorProperties)
+                {
+                    var propertyName = property.Name;
+                    var propertyValue = property.GetValue(indicator);
+
+                    if (!nonIndicatorValues.TryGetValue(propertyName, out var propertyHistory))
+                    {
+                        propertyHistory = new List<(DateTime, object)>();
+                        nonIndicatorValues[propertyName] = propertyHistory;
+                    }
+
+                    propertyHistory.Add((newInputPoint.EndTime, propertyValue));
                 }
             }
 
@@ -4276,7 +4466,7 @@ namespace QuantConnect.Algorithm
 
             return new IndicatorHistory(indicatorsDataPointsByTime, indicatorsDataPointPerProperty,
                 new Lazy<PyObject>(
-                    () => PandasConverter.GetIndicatorDataFrame(indicatorsDataPointPerProperty.Select(x => new KeyValuePair<string, List<IndicatorDataPoint>>(x.Name, x.Values))),
+                    () => PandasConverter.GetIndicatorDataFrame(indicatorsDataPointPerProperty.Select(x => new KeyValuePair<string, List<IndicatorDataPoint>>(x.Name, x.Values)), nonIndicatorValues),
                     isThreadSafe: false));
         }
 

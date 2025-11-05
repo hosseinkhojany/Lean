@@ -14,16 +14,68 @@
 */
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
+using Python.Runtime;
 using NUnit.Framework;
 using QuantConnect.Indicators;
+using System.Collections.Generic;
 
 namespace QuantConnect.Tests.Indicators
 {
     [TestFixture]
     public class RollingWindowTests
     {
+        [Test]
+        public void ResizedFromZero()
+        {
+            var window = new RollingWindow<int>(0);
+
+            Assert.AreEqual(0, window.Count);
+            Assert.AreEqual(0, window.Size);
+            window.Size = 1;
+            window.Add(10);
+
+            Assert.AreEqual(1, window.Count);
+            Assert.AreEqual(1, window.Size);
+            Assert.AreEqual(10, window[0]);
+            Assert.AreEqual(10, window[-1]);
+        }
+
+        [Test]
+        public void NotFullRollingWindowNegativeIndex()
+        {
+            var window = new RollingWindow<int>(3);
+            window.Add(10);
+            window.Add(20);
+
+            Assert.AreEqual(20, window.First());
+            Assert.AreEqual(20, window[0]);
+            Assert.AreEqual(20, window[-2]);
+
+            Assert.AreEqual(10, window[1]);
+            Assert.AreEqual(10, window[-1]);
+            Assert.AreEqual(10, window.Last());
+
+            Assert.AreEqual(0, window[2]);
+            Assert.AreEqual(0, window[-3]);
+
+            window.Add(30);
+            window.Add(40);
+
+            Assert.AreEqual(40, window.First());
+            Assert.AreEqual(40, window[0]);
+            Assert.AreEqual(40, window[-3]);
+
+            Assert.AreEqual(20, window[2]);
+            Assert.AreEqual(20, window[-1]);
+            Assert.AreEqual(20, window.Last());
+
+            Assert.IsTrue(window.IsReady);
+            Assert.AreEqual(3, window.Size);
+            Assert.AreEqual(3, window.Count);
+            Assert.AreEqual(4, window.Samples);
+        }
+
         [Test]
         public void NewWindowIsEmpty()
         {
@@ -370,7 +422,10 @@ namespace QuantConnect.Tests.Indicators
             // Add two elements and test negative indexing before window is full
             window.Add(7);
             window.Add(-2);
-            Assert.AreEqual(0, window[-1]);
+            Assert.AreEqual(7, window[-1]);
+            Assert.AreEqual(7, window.Last());
+            Assert.AreEqual(-2, window[0]);
+            Assert.AreEqual(-2, window.First());
             Assert.AreEqual(2, window.Count);
             Assert.IsFalse(window.IsReady);
 
@@ -466,6 +521,85 @@ namespace QuantConnect.Tests.Indicators
             foreach (var index in testCases)
             {
                 Assert.Throws<ArgumentOutOfRangeException>(() => { var x = window[index]; });
+            }
+        }
+
+        [TestCase("tuple", 3)]
+        [TestCase("list", 6)]
+        [TestCase("dict", 2)]
+        [TestCase("float", 3.9)]
+        [TestCase("trade_bar", 100)]
+        [TestCase("quote_bar", 100)]
+        [TestCase("custom_data_type", 123)]
+        public void RollingWindowWorksWithAnyType(string type, decimal expectedValue)
+        {
+            using (Py.GIL())
+            {
+                var testModule = PyModule.FromString("TestRollingWindow",
+                    @"
+from AlgorithmImports import *
+
+class MyCustomDataType(PythonData):
+    def get_source(self, config: SubscriptionDataConfig, date: datetime, is_live: bool) -> SubscriptionDataSource:
+        fileName = LeanData.GenerateZipFileName(Symbols.SPY, date, Resolution.MINUTE, config.TickType)
+
+    def reader(self, config: SubscriptionDataConfig, line: str, date: datetime, is_live: bool) -> BaseData:
+        data = line.split(',')
+        result = MyCustomDataType()
+
+def rolling_window_with_tuple():
+    rollingWindow = RollingWindow(5)
+    rollingWindow.add((1, ""a""))
+    rollingWindow.add((2, ""b""))
+    rollingWindow.add((3, ""c""))
+    return rollingWindow[0][0]
+
+def rolling_window_with_list():
+    rollingWindow = RollingWindow(5)
+    rollingWindow.add([1, 2, 3])
+    rollingWindow.add([5])
+    rollingWindow.add([6, 7, 8])
+    return rollingWindow[0][0]
+
+def rolling_window_with_dict():
+    rollingWindow = RollingWindow(5)
+    rollingWindow.add({""key1"": 1, ""key2"": ""a""})
+    rollingWindow.add({""key1"": 2, ""key2"": ""b""})
+    return rollingWindow[0][""key1""]
+
+def rolling_window_with_float():
+    rollingWindow = RollingWindow(5)
+    rollingWindow.add(1.5)
+    rollingWindow.add(2.7)
+    rollingWindow.add(3.9)
+    return rollingWindow[0]
+
+def rolling_window_with_trade_bar():
+    rollingWindow = RollingWindow(5)
+    bar1 = TradeBar()
+    bar1.close = 100
+    rollingWindow.add(bar1)
+    return rollingWindow[0].close
+
+def rolling_window_with_quote_bar():
+    rollingWindow = RollingWindow(5)
+    bar1 = QuoteBar()
+    bar1.value = 100
+    rollingWindow.add(bar1)
+    return rollingWindow[0].value
+
+def rolling_window_with_custom_data_type():
+    rollingWindow = RollingWindow(5)
+    customData = PythonData(MyCustomDataType())
+    customData.test = 123
+    rollingWindow.add(customData)
+    return rollingWindow[0].test
+");
+                var methodName = "rolling_window_with_" + type;
+
+                var test = testModule.GetAttr(methodName).Invoke();
+                var value = test.As<decimal>();
+                Assert.AreEqual(expectedValue, value);
             }
         }
     }

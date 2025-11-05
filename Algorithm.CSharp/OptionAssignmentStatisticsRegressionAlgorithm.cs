@@ -68,11 +68,6 @@ namespace QuantConnect.Algorithm.CSharp
 
         public override void OnData(Slice slice)
         {
-            if (_goog.Price == 0 || _googCall600.Price == 0 || _googCall650.Price == 0)
-            {
-                return;
-            }
-
             if (!Portfolio.Invested)
             {
                 if (Time < _googCall600Symbol.ID.Date)
@@ -309,6 +304,7 @@ namespace QuantConnect.Algorithm.CSharp
             {"Estimated Strategy Capacity", "$0"},
             {"Lowest Capacity Asset", "GOOCV VP83T1ZUHROL"},
             {"Portfolio Turnover", "50.31%"},
+            {"Drawdown Recovery", "0"},
             {"OrderListHash", "eaa9f229fb4efb0beaccbbd71881268a"}
         };
     }

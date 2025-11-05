@@ -15,6 +15,10 @@
 
 using System;
 using System.IO;
+using QuantConnect.Util;
+using System.Collections.Generic;
+using QuantConnect.Securities.Future;
+using System.Runtime.CompilerServices;
 
 namespace QuantConnect.Data.UniverseSelection
 {
@@ -23,6 +27,12 @@ namespace QuantConnect.Data.UniverseSelection
     /// </summary>
     public class FutureUniverse : BaseChainUniverseData
     {
+        /// <summary>
+        /// Cache for the symbols to avoid creating them multiple times
+        /// </summary>
+        /// <remarks>Key: securityType, market, ticker, expiry</remarks>
+        private static readonly Dictionary<(SecurityType, string, string, DateTime), Symbol> _symbolsCache = new();
+
         /// <summary>
         /// Creates a new instance of the <see cref="FutureUniverse"/> class
         /// </summary>
@@ -58,12 +68,28 @@ namespace QuantConnect.Data.UniverseSelection
         [StubsIgnore]
         public override BaseData Reader(SubscriptionDataConfig config, StreamReader stream, DateTime date, bool isLiveMode)
         {
-            if (TryRead(config, stream, date, out var symbol, out var remainingLine))
+            if (stream == null || stream.EndOfStream)
             {
-                return new FutureUniverse(date, symbol, remainingLine);
+                return null;
             }
 
-            return null;
+            if (stream.Peek() == '#')
+            {
+                // Skip header
+                stream.ReadLine();
+                return null;
+            }
+
+            var futureContractMonth = stream.GetDateTime(DateFormat.YearMonth);
+            var cacheKey = (config.SecurityType, config.Market, config.Symbol.ID.Symbol, futureContractMonth);
+            if (!TryGetCachedSymbol(cacheKey, out var symbol))
+            {
+                var expiry = FuturesExpiryUtilityFunctions.GetFutureExpirationFromContractMonth(config.Symbol, futureContractMonth);
+                symbol = Symbol.CreateFuture(config.Symbol.ID.Symbol, config.Symbol.ID.Market, expiry);
+                CacheSymbol(cacheKey, symbol);
+            }
+
+            return new FutureUniverse(date, symbol, stream.ReadLine());
         }
 
         /// <summary>
@@ -101,12 +127,42 @@ namespace QuantConnect.Data.UniverseSelection
         /// </summary>
         public static string ToCsv(Symbol symbol, decimal open, decimal high, decimal low, decimal close, decimal volume, decimal? openInterest)
         {
-            return $"{symbol.ID},{symbol.Value},{open},{high},{low},{close},{volume},{openInterest}";
+            var contractMonth = FuturesExpiryUtilityFunctions.GetFutureContractMonth(symbol);
+            return $"{contractMonth.ToString(DateFormat.YearMonth)},{open},{high},{low},{close},{volume},{openInterest}";
         }
 
         /// <summary>
         /// Gets the CSV header string for this universe entry
         /// </summary>
-        public static string CsvHeader => "symbol_id,symbol_value,open,high,low,close,volume,open_interest";
+        public static string CsvHeader => "expiry,open,high,low,close,volume,open_interest";
+
+        /// <summary>
+        /// Tries to get a symbol from the cache
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected static bool TryGetCachedSymbol((SecurityType, string, string, DateTime) key, out Symbol symbol)
+        {
+            lock (_symbolsCache)
+            {
+                return _symbolsCache.TryGetValue(key, out symbol);
+            }
+        }
+
+        /// <summary>
+        /// Caches a symbol
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected static void CacheSymbol((SecurityType, string, string, DateTime) key, Symbol symbol)
+        {
+            lock (_symbolsCache)
+            {
+                // limit the cache size to help with memory usage
+                if (_symbolsCache.Count >= 100000)
+                {
+                    _symbolsCache.Clear();
+                }
+                _symbolsCache.TryAdd(key, symbol);
+            }
+        }
     }
 }
